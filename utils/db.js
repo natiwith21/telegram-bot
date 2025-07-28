@@ -2,10 +2,11 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('📦 MongoDB connected');
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ MongoDB connected');
   } catch (err) {
-    console.error('❌ DB Error:', err.message);
+    console.error('❌ Database connection failed:', err.message);
+    console.log('Fix: Update MongoDB URI in .env file or check network connection');
     process.exit(1);
   }
 };
