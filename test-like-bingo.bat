@@ -1,59 +1,53 @@
 @echo off
-echo 🎯 Testing Like Bingo Feature
+echo ========================================
+echo    TESTING LIKE BINGO GAME
+echo ========================================
 echo.
-echo ==========================================
-echo Bot Status Check
-echo ==========================================
-echo ✅ Bot started successfully with MongoDB connection
-echo ✅ Like Bingo feature added to bot.js
-echo ✅ New commands registered
+
+echo Starting Like Bingo Game with your preferred UI style...
 echo.
-echo ==========================================
-echo How to Test Like Bingo
-echo ==========================================
+
+echo Step 1: Starting Backend API...
+start "Backend" cmd /k "cd /d %~dp0 && npm start"
+
 echo.
-echo 📱 **On Your Phone (Telegram):**
-echo 1. Open your bot in Telegram
-echo 2. Send: /likebingo
-echo 3. You should see the 10x10 grid interface
+echo Step 2: Starting Frontend...
+start "Frontend" cmd /k "cd /d %~dp0\frontend && npm run dev"
+
 echo.
-echo 🔘 **Alternative Access Methods:**
-echo - Send /start → Menu → Play Bingo → Like Bingo (NEW)
-echo - Send /playbingo → Like Bingo (NEW)
+echo ========================================
+echo     LIKE BINGO TESTING GUIDE
+echo ========================================
 echo.
-echo ==========================================
-echo Expected Interface
-echo ==========================================
-echo 🎉 Like Bingo 🎉
+echo 🎮 DIRECT BROWSER ACCESS:
+echo • Like Bingo Game: http://localhost:3000/like-bingo
+echo • Main Menu: http://localhost:3000/menu
 echo.
-echo 💰 Wallet: [your_balance]  🎁 Bonus: [your_bonus]
-echo 🎯 Active Game: 2  💸 Stake: 10
+echo 📱 TELEGRAM BOT TESTING:
+echo 1. Go to your Telegram bot
+echo 2. Click "Play Bingo"
+echo 3. Click "Like Bingo (NEW)"
+echo 4. Click "🎮 Play Like Bingo (Browser)" button
 echo.
-echo 🔢 Select your numbers:
-echo [10x10 grid with numbers 1-100]
-echo [🔄 Refresh] [🎲 Start Game]
+echo 🎯 GAME FEATURES:
+echo • Mobile-first UI design (purple theme)
+echo • Number selection (1-100, max 10 numbers)
+echo • Variable stakes (5-50 coins)
+echo • Real-time balance updates
+echo • Game history tracking
+echo • Tab navigation (Game/Scores/History/Wallet/Profile)
+echo • Animated game results
+echo • Win multipliers up to 20x
 echo.
-echo ==========================================
-echo Features to Test
-echo ==========================================
-echo ✅ Click any number (1-100) → Should show "Selected number X!"
-echo ✅ Click Refresh → Should update balance and show "Page refreshed!"
-echo ✅ Click Start Game → Should deduct 10 coins and show "Game started!"
-echo ✅ If balance < 10 → Should show insufficient funds warning
+echo 🏆 HOW TO WIN:
+echo • Select numbers (1-100)
+echo • More matches = higher multiplier
+echo • 3 matches: 1.2x stake
+echo • 5 matches: 2x stake  
+echo • 7 matches: 5x stake
+echo • 10 matches: 20x stake
 echo.
-echo ==========================================
-echo Troubleshooting
-echo ==========================================
-echo ❌ If bot doesn't respond:
-echo   - Check if bot is running (npm start)
-echo   - Verify MongoDB connection
-echo   - Check .env file has correct BOT_TOKEN
-echo.
-echo ❌ If commands don't work:
-echo   - Wait 1-2 minutes for Telegram to update commands
-echo   - Try /start first to register
-echo   - Check user registration status
-echo.
-echo 🔄 To restart bot: Ctrl+C then npm start
-echo.
+echo ========================================
+echo     ENJOY THE MOBILE EXPERIENCE!
+echo ========================================
 pause

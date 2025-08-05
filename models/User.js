@@ -12,7 +12,10 @@ const userSchema = new mongoose.Schema({
   banned: { type: Boolean, default: false },
   registeredAt: { type: Date, default: Date.now },
   lastActive: { type: Date, default: Date.now },
-  ui: { type: String, default: 'default' }
+  ui: { type: String, default: 'default' },
+  referredBy: { type: String, default: null }, // Telegram ID of referrer
+  referralCount: { type: Number, default: 0 }, // Number of successful referrals
+  totalReferralEarnings: { type: Number, default: 0 } // Total earned from referrals
 });
 
 module.exports = mongoose.model('User', userSchema);

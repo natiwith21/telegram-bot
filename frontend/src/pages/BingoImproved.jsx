@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from '../hooks/useTelegram';
+import { useBingoWebSocket, usePaymentWebSocket } from '../hooks/useWebSocket';
 
 const BingoImproved = () => {
   const { telegramId } = useTelegram();
   const [searchParams] = useSearchParams();
   const gameMode = searchParams.get('mode') || 'demo';
+  const token = searchParams.get('token');
   
   // Game State
   const [grid, setGrid] = useState([]);
@@ -24,6 +26,23 @@ const BingoImproved = () => {
     numbersLeft: 75,
     timeElapsed: 0
   });
+  const [sessionData, setSessionData] = useState(null);
+  const [tokenError, setTokenError] = useState(null);
+  const [gamesRemaining, setGamesRemaining] = useState(0);
+
+  // WebSocket connections
+  const { 
+    isConnected: isBingoConnected, 
+    gameState, 
+    callNumber: wsCallNumber, 
+    markNumber: wsMarkNumber, 
+    announceWin: wsAnnounceWin 
+  } = useBingoWebSocket(telegramId, token, `bingo_${gameMode}`);
+  
+  const { 
+    paymentVerified, 
+    verificationMessage 
+  } = usePaymentWebSocket(telegramId, gameMode);
 
   // Game Configuration
   const gameConfig = {
@@ -35,6 +54,32 @@ const BingoImproved = () => {
   };
 
   const config = gameConfig[gameMode] || gameConfig.demo;
+
+  // Validate token and get session data
+  const validateToken = async () => {
+    if (!token || !telegramId) {
+      setTokenError('No access token provided. Please start from Telegram bot.');
+      return false;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/validate-token/${telegramId}?token=${token}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setSessionData(data);
+        setGamesRemaining(data.gamesRemaining);
+        return true;
+      } else {
+        setTokenError(data.error || 'Invalid access token');
+        return false;
+      }
+    } catch (error) {
+      console.error('Token validation error:', error);
+      setTokenError('Connection error. Please try again.');
+      return false;
+    }
+  };
 
   // Initialize 5x5 Bingo Grid (more traditional)
   const initializeGrid = useCallback(() => {
@@ -85,17 +130,24 @@ const BingoImproved = () => {
       return;
     }
 
+    // Validate token first
+    const isValidToken = await validateToken();
+    if (!isValidToken) {
+      return;
+    }
+
     try {
       const response = await fetch(`http://localhost:3001/api/bingo-bet/${telegramId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameMode })
+        body: JSON.stringify({ gameMode, token })
       });
 
       const data = await response.json();
       if (data.success) {
         setBetPlaced(true);
         setUserBalance(data.newBalance);
+        setGamesRemaining(data.gamesRemaining);
       } else {
         alert(data.error || 'Failed to place bet');
       }
@@ -126,8 +178,13 @@ const BingoImproved = () => {
       numbersLeft: availableNumbers.length - 1
     }));
 
+    // Broadcast number to other players via WebSocket
+    if (isBingoConnected) {
+      wsCallNumber(newNumber);
+    }
+
     return newNumber;
-  }, [calledNumbers]);
+  }, [calledNumbers, isBingoConnected, wsCallNumber]);
 
   // Check for winning patterns
   const checkWin = useCallback(() => {
@@ -184,6 +241,11 @@ const BingoImproved = () => {
   const markNumber = (number) => {
     if (calledNumbers.includes(number) && !markedNumbers.has(number)) {
       setMarkedNumbers(prev => new Set([...prev, number]));
+      
+      // Broadcast mark to other players via WebSocket
+      if (isBingoConnected) {
+        wsMarkNumber(number);
+      }
     }
   };
 
@@ -212,20 +274,31 @@ const BingoImproved = () => {
         multiplier: config.multiplier
       });
 
+      // Announce win to other players via WebSocket
+      if (isBingoConnected) {
+        wsAnnounceWin(winResult.pattern);
+      }
+
       // Award winnings
-      if (telegramId && gameMode !== 'demo') {
+      if (telegramId && gameMode !== 'demo' && token) {
         fetch(`http://localhost:3001/api/bingo-win/${telegramId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             amount: winAmount,
             gameMode: gameMode,
-            pattern: winResult.pattern
+            pattern: winResult.pattern,
+            token: token
           })
+        }).then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            setGamesRemaining(data.gamesRemaining);
+          }
         });
       }
     }
-  }, [markedNumbers, gameEnded, config, telegramId, gameMode, checkWin]);
+  }, [markedNumbers, gameEnded, config, telegramId, gameMode, checkWin, isBingoConnected, wsAnnounceWin]);
 
   // Game loop
   useEffect(() => {
@@ -256,10 +329,47 @@ const BingoImproved = () => {
     }
   }, [isPlaying]);
 
-  // Initialize on mount
+  // Initialize on mount and validate token
   useEffect(() => {
     initializeGrid();
-  }, [initializeGrid]);
+    
+    // For paid games, validate token on mount
+    if (gameMode !== 'demo') {
+      validateToken();
+    }
+  }, [initializeGrid, gameMode]);
+
+  // Handle real-time payment verification
+  useEffect(() => {
+    if (paymentVerified && verificationMessage) {
+      // Show success notification
+      alert(`🎉 ${verificationMessage}`);
+      
+      // Refresh page with new token if available
+      const newToken = sessionStorage.getItem('gameSessionToken');
+      if (newToken) {
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('token', newToken);
+        window.location.href = currentUrl.toString();
+      }
+    }
+  }, [paymentVerified, verificationMessage]);
+
+  // Handle real-time game events from other players
+  useEffect(() => {
+    if (gameState.winner && gameState.winner !== telegramId) {
+      // Show notification when another player wins
+      setGameResult({
+        won: false,
+        pattern: gameState.winningPattern,
+        amount: 0,
+        otherPlayerWon: true,
+        winner: gameState.winner
+      });
+      setGameEnded(true);
+      setIsPlaying(false);
+    }
+  }, [gameState.winner, gameState.winningPattern, telegramId]);
 
   const startGame = async () => {
     if (!betPlaced) {
@@ -283,6 +393,25 @@ const BingoImproved = () => {
 
   const getColumnLetter = (colIndex) => ['B', 'I', 'N', 'G', 'O'][colIndex];
 
+  // Show token error if exists
+  if (tokenError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 p-4 flex items-center justify-center">
+        <div className="max-w-md mx-auto bg-white/90 backdrop-blur rounded-2xl p-8 shadow-2xl text-center">
+          <div className="text-6xl mb-4">🚫</div>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
+          <p className="text-gray-700 mb-6">{tokenError}</p>
+          <Link 
+            to="/menu" 
+            className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all"
+          >
+            ← Back to Menu
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 p-4">
       <div className="max-w-4xl mx-auto">
@@ -296,6 +425,12 @@ const BingoImproved = () => {
             🎯 BINGO {gameMode.toUpperCase()}
           </h1>
           <div className="flex justify-center items-center space-x-4 text-sm text-gray-600">
+            {gameMode !== 'demo' && (
+              <>
+                <span>Games Remaining: {gamesRemaining}</span>
+                <span>•</span>
+              </>
+            )}
             <span>Bet: {config.bet} coins</span>
             <span>•</span>
             <span>Win: {config.bet * config.multiplier} coins</span>
@@ -308,7 +443,7 @@ const BingoImproved = () => {
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="grid grid-cols-3 gap-4 mb-6"
+          className="grid grid-cols-4 gap-4 mb-6"
         >
           <div className="bg-white/80 backdrop-blur rounded-xl p-3 text-center shadow-lg">
             <div className="text-2xl font-bold text-emerald-600">{calledNumbers.length}</div>
@@ -321,6 +456,14 @@ const BingoImproved = () => {
           <div className="bg-white/80 backdrop-blur rounded-xl p-3 text-center shadow-lg">
             <div className="text-2xl font-bold text-purple-600">{markedNumbers.size - 1}</div>
             <div className="text-xs text-gray-600">Marked</div>
+          </div>
+          <div className="bg-white/80 backdrop-blur rounded-xl p-3 text-center shadow-lg">
+            <div className={`text-lg font-bold ${isBingoConnected ? 'text-green-600' : 'text-gray-400'}`}>
+              {gameState.playersCount || 1}
+            </div>
+            <div className="text-xs text-gray-600">
+              {isBingoConnected ? 'Players Online' : 'Offline Mode'}
+            </div>
           </div>
         </motion.div>
 
@@ -408,14 +551,21 @@ const BingoImproved = () => {
                   : 'bg-gradient-to-br from-red-100 to-pink-100 border-2 border-red-300'
               }`}
             >
-              <div className="text-4xl mb-2">{gameResult.won ? '🎉' : '😢'}</div>
+              <div className="text-4xl mb-2">
+                {gameResult.won ? '🎉' : gameResult.otherPlayerWon ? '👑' : '😢'}
+              </div>
               <h3 className="text-2xl font-bold mb-2">
-                {gameResult.won ? 'BINGO!' : 'Game Over'}
+                {gameResult.won ? 'BINGO!' : gameResult.otherPlayerWon ? 'Player Won!' : 'Game Over'}
               </h3>
               <p className="text-lg mb-2">{gameResult.pattern}</p>
               {gameResult.won && (
                 <p className="text-xl font-bold text-green-600">
                   Won {gameResult.amount} coins! ({gameResult.multiplier}x multiplier)
+                </p>
+              )}
+              {gameResult.otherPlayerWon && (
+                <p className="text-lg text-blue-600">
+                  Another player achieved {gameResult.pattern}! Better luck next time.
                 </p>
               )}
             </motion.div>

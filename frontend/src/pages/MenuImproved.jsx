@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import WalletBalanceImproved from '../components/WalletBalanceImproved';
@@ -6,8 +6,10 @@ import { useTelegram } from '../hooks/useTelegram';
 
 const MenuImproved = () => {
   const { telegramId } = useTelegram();
+  const [searchParams] = useSearchParams();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
 
   // Update time every second
   useEffect(() => {
@@ -17,17 +19,33 @@ const MenuImproved = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Show welcome notification for new users
+  // Handle URL notifications and welcome messages
   useEffect(() => {
     if (telegramId) {
+      // Check for insufficient balance notification
+      const notification = searchParams.get('notification');
+      const required = searchParams.get('required');
+      const current = searchParams.get('current');
+      
+      if (notification === 'insufficient_balance' && required && current) {
+        setNotificationMessage(
+          `⚠️ Insufficient Balance! You need ${required} coins but only have ${current} coins. Play other games to earn more coins!`
+        );
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 8000);
+        return;
+      }
+      
+      // Show welcome notification for new users
       const hasVisited = localStorage.getItem('hasVisited');
       if (!hasVisited) {
+        setNotificationMessage('🎉 Welcome to our gaming platform! Start with the demo games and earn coins to unlock premium features!');
         setShowNotification(true);
         localStorage.setItem('hasVisited', 'true');
         setTimeout(() => setShowNotification(false), 5000);
       }
     }
-  }, [telegramId]);
+  }, [telegramId, searchParams]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -176,24 +194,31 @@ const MenuImproved = () => {
         <div className="absolute top-40 left-40 w-60 h-60 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Welcome Notification */}
+      {/* Dynamic Notifications */}
       <AnimatePresence>
         {showNotification && (
           <motion.div
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
-            className="fixed top-4 left-4 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white p-4 rounded-2xl shadow-2xl"
+            className={`fixed top-4 left-4 right-4 z-50 text-white p-4 rounded-2xl shadow-2xl ${
+              notificationMessage.includes('Insufficient') 
+                ? 'bg-gradient-to-r from-red-500 to-orange-500' 
+                : 'bg-gradient-to-r from-green-500 to-emerald-500'
+            }`}
           >
             <div className="flex items-center space-x-3">
-              <span className="text-2xl">🎉</span>
-              <div>
-                <p className="font-bold">Welcome to Game Universe!</p>
-                <p className="text-sm opacity-90">Start your gaming journey with free spins!</p>
+              <span className="text-2xl">
+                {notificationMessage.includes('Insufficient') ? '⚠️' : '🎉'}
+              </span>
+              <div className="flex-1">
+                <p className="font-medium text-sm leading-tight">
+                  {notificationMessage}
+                </p>
               </div>
               <button
                 onClick={() => setShowNotification(false)}
-                className="ml-auto text-white/80 hover:text-white"
+                className="ml-auto text-white/80 hover:text-white text-lg"
               >
                 ✕
               </button>

@@ -4,8 +4,11 @@ import Menu from './pages/Menu';
 import MenuImproved from './pages/MenuImproved';
 import Bingo from './pages/Bingo';
 import BingoImproved from './pages/BingoImproved';
+import BingoPro from './pages/BingoPro';
 import Spin from './pages/Spin';
 import SpinImproved from './pages/SpinImproved';
+import SpinPro from './pages/SpinPro';
+import LikeBingo from './pages/LikeBingo';
 import Admin from './pages/Admin';
 import { TelegramProvider } from './hooks/useTelegram';
 
@@ -30,13 +33,16 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
           <Routes>
-            <Route path="/" element={<MenuImproved />} />
+            <Route path="/" element={<LikeBingo />} />
             <Route path="/menu" element={<MenuImproved />} />
             <Route path="/menu-old" element={<Menu />} />
-            <Route path="/bingo" element={<BingoImproved />} />
+            <Route path="/bingo" element={<BingoPro />} />
+            <Route path="/bingo-improved" element={<BingoImproved />} />
             <Route path="/bingo-old" element={<Bingo />} />
-            <Route path="/spin" element={<SpinImproved />} />
+            <Route path="/spin" element={<SpinPro />} />
+            <Route path="/spin-improved" element={<SpinImproved />} />
             <Route path="/spin-old" element={<Spin />} />
+            <Route path="/like-bingo" element={<LikeBingo />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>
         </div>

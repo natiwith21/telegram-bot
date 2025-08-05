@@ -1,8 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const connectDB = require('./utils/db');
-const User = require('./models/User');
+
+// Database and models with error handling
+let connectDB, User, Payment, GameSession;
+try {
+  connectDB = require('./utils/db');
+  User = require('./models/User');
+  Payment = require('./models/Payment');
+  GameSession = require('./models/GameSession');
+  console.log('✅ Database models loaded for API server');
+} catch (error) {
+  console.error('❌ Error loading database models:', error.message);
+  process.exit(1); // API server cannot work without database
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,6 +22,32 @@ connectDB();
 
 app.use(cors());
 app.use(express.json());
+
+// Token validation middleware
+async function validateToken(req, res, next) {
+  const token = req.query.token || req.body.token;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  try {
+    const session = await GameSession.findOne({ 
+      sessionToken: token, 
+      isActive: true,
+      expiresAt: { $gt: new Date() }
+    }).populate('paymentId');
+    
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    
+    req.gameSession = session;
+    next();
+  } catch (error) {
+    return res.status(500).json({ error: 'Token validation failed' });
+  }
+}
 
 // Get user balance and bonus
 app.get('/api/user/:telegramId', async (req, res) => {
@@ -33,43 +70,91 @@ app.get('/api/user/:telegramId', async (req, res) => {
   }
 });
 
-// Bingo win endpoint
-app.post('/api/bingo-win/:telegramId', async (req, res) => {
+// Bingo win endpoint - now requires token
+app.post('/api/bingo-win/:telegramId', validateToken, async (req, res) => {
   try {
     const { telegramId } = req.params;
-    const { amount, gameMode } = req.body;
+    const { amount, gameMode, pattern } = req.body;
+    const session = req.gameSession;
+    
+    // Verify session belongs to user and game mode matches
+    if (session.telegramId !== telegramId || session.gameMode !== gameMode) {
+      return res.status(403).json({ error: 'Invalid session for this game' });
+    }
     
     const user = await User.findOne({ telegramId });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Deduct bet amount first (except for demo)
-    if (gameMode !== 'demo') {
-      const betAmount = parseInt(gameMode);
-      if (user.balance < betAmount) {
-        return res.status(400).json({ error: 'Insufficient balance' });
-      }
-      user.balance -= betAmount;
-    }
-    
     // Add winnings
     user.balance += amount;
-    user.gameHistory.push(`Bingo ${gameMode}: won ${amount} coins`);
+    user.gameHistory.push(`Bingo ${gameMode}: won ${amount} coins (${pattern || 'Pattern'})`);
     user.lastActive = new Date();
     await user.save();
     
-    res.json({ success: true, newBalance: user.balance });
+    res.json({ 
+      success: true, 
+      newBalance: user.balance,
+      gamesRemaining: session.maxGames - session.gamesPlayed
+    });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Bingo bet endpoint (for starting game)
-app.post('/api/bingo-bet/:telegramId', async (req, res) => {
+// Token validation for game access
+app.get('/api/validate-token/:telegramId', validateToken, async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    const session = req.gameSession;
+    
+    // Check if the session belongs to the user
+    if (session.telegramId !== telegramId) {
+      return res.status(403).json({ error: 'Token does not belong to user' });
+    }
+    
+    // Check if user has games remaining
+    if (session.gamesPlayed >= session.maxGames) {
+      return res.status(403).json({ error: 'No games remaining' });
+    }
+    
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      gameMode: session.gameMode,
+      gamesRemaining: session.maxGames - session.gamesPlayed,
+      user: {
+        name: user.name,
+        balance: user.balance,
+        bonus: user.bonus
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Bingo bet endpoint (for starting game) - now requires token
+app.post('/api/bingo-bet/:telegramId', validateToken, async (req, res) => {
   try {
     const { telegramId } = req.params;
     const { gameMode } = req.body;
+    const session = req.gameSession;
+    
+    // Verify session belongs to user and game mode matches
+    if (session.telegramId !== telegramId || session.gameMode !== gameMode) {
+      return res.status(403).json({ error: 'Invalid session for this game' });
+    }
+    
+    // Check if user has games remaining
+    if (session.gamesPlayed >= session.maxGames) {
+      return res.status(403).json({ error: 'No games remaining. Purchase a new session.' });
+    }
     
     const user = await User.findOne({ telegramId });
     if (!user) {
@@ -80,17 +165,19 @@ app.post('/api/bingo-bet/:telegramId', async (req, res) => {
       return res.json({ success: true, balance: user.balance });
     }
     
-    const betAmount = parseInt(gameMode);
-    if (user.balance < betAmount) {
-      return res.status(400).json({ error: 'Insufficient balance' });
-    }
+    // For paid games, increment games played
+    session.gamesPlayed += 1;
+    await session.save();
     
-    user.balance -= betAmount;
-    user.gameHistory.push(`Bingo ${gameMode}: bet ${betAmount} coins`);
+    user.gameHistory.push(`Bingo ${gameMode}: started game (${session.gamesPlayed}/${session.maxGames})`);
     user.lastActive = new Date();
     await user.save();
     
-    res.json({ success: true, newBalance: user.balance });
+    res.json({ 
+      success: true, 
+      newBalance: user.balance,
+      gamesRemaining: session.maxGames - session.gamesPlayed
+    });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -185,6 +272,154 @@ app.post('/api/admin/announcement', async (req, res) => {
     console.log('Announcement:', message);
     res.json({ success: true });
   } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Like Bingo Game Endpoints
+app.get('/api/user/:telegramId', async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      success: true,
+      user: {
+        telegramId: user.telegramId,
+        name: user.name,
+        balance: user.balance || 0,
+        bonus: user.bonus || 0,
+        gameHistory: user.gameHistory || []
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/like-bingo-play', async (req, res) => {
+  try {
+    const { telegramId, selectedNumbers, stake, token } = req.body;
+    
+    // Validate input
+    if (!telegramId || !selectedNumbers || !stake) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    if (!Array.isArray(selectedNumbers) || selectedNumbers.length === 0) {
+      return res.status(400).json({ error: 'Must select at least one number' });
+    }
+    
+    if (selectedNumbers.length > 10) {
+      return res.status(400).json({ error: 'Cannot select more than 10 numbers' });
+    }
+    
+    // Find user
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Check balance
+    if (user.balance < stake) {
+      return res.status(400).json({ error: 'Insufficient balance' });
+    }
+    
+    // Deduct stake from balance
+    user.balance -= stake;
+    
+    // Generate winning numbers (20 random numbers from 1-100)
+    const winningNumbers = [];
+    while (winningNumbers.length < 20) {
+      const num = Math.floor(Math.random() * 100) + 1;
+      if (!winningNumbers.includes(num)) {
+        winningNumbers.push(num);
+      }
+    }
+    
+    // Calculate matches
+    const matches = selectedNumbers.filter(num => winningNumbers.includes(num));
+    
+    // Calculate winnings based on matches
+    const multipliers = {
+      0: 0, 1: 0, 2: 0, 3: 1.2, 4: 1.5, 5: 2, 
+      6: 3, 7: 5, 8: 8, 9: 12, 10: 20
+    };
+    
+    const winMultiplier = multipliers[matches.length] || 0;
+    const winAmount = Math.floor(stake * winMultiplier);
+    
+    // Add winnings to balance
+    if (winAmount > 0) {
+      user.balance += winAmount;
+    }
+    
+    // Add to game history
+    const gameResult = `Like Bingo: ${matches.length}/10 matches, ${winAmount > 0 ? `+${winAmount}` : '0'} coins`;
+    user.gameHistory = user.gameHistory || [];
+    user.gameHistory.push(gameResult);
+    
+    // Keep only last 20 game records
+    if (user.gameHistory.length > 20) {
+      user.gameHistory = user.gameHistory.slice(-20);
+    }
+    
+    await user.save();
+    
+    res.json({
+      success: true,
+      newBalance: user.balance,
+      winningNumbers,
+      matches,
+      winAmount,
+      gameResult
+    });
+    
+  } catch (error) {
+    console.error('Like Bingo play error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/spin-result/:telegramId', async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    const { coins, bonus, prize } = req.body;
+    
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Update balance and bonus
+    user.balance = (user.balance || 0) + coins;
+    user.bonus = (user.bonus || 0) + bonus;
+    
+    // Add to game history
+    const gameResult = `Spin: ${prize}, +${coins} coins, +${bonus} bonus`;
+    user.gameHistory = user.gameHistory || [];
+    user.gameHistory.push(gameResult);
+    
+    // Keep only last 20 game records
+    if (user.gameHistory.length > 20) {
+      user.gameHistory = user.gameHistory.slice(-20);
+    }
+    
+    await user.save();
+    
+    res.json({
+      success: true,
+      newBalance: user.balance,
+      newBonus: user.bonus
+    });
+    
+  } catch (error) {
+    console.error('Spin result error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
