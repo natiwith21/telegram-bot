@@ -8,7 +8,7 @@ Add these to your `.env` file:
 
 ```env
 # Payment Agent Configuration
-AGENT_PHONE=09XXXXXXX
+AGENT_PHONE=0967218959
 AGENT_NAME=Payment Agent
 
 # Admin IDs (same as existing)
@@ -55,7 +55,7 @@ ADMIN_ID_2=your_telegram_id_2
 💰 Payment Instructions:
 1. Bank Transfer: Send to Ethiopian Commercial Bank
    Account: 1000526054753
-2. Mobile Money: Send to 09XXXXXXX
+2. Mobile Money: Send to 0967218959
    Methods: Telebirr, HelloCash, Bank Transfer
 3. Amount Range: 50 - 10000 Birr
 4. Points Rate: 1 Birr = 1 point

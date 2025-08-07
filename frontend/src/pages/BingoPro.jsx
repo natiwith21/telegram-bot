@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from '../hooks/useTelegram';
-import { useBingoWebSocket, usePaymentWebSocket } from '../hooks/useWebSocket';
+import { useBingoWebSocket, usePaymentWebSocket, useGlobalBingoWebSocket } from '../hooks/useWebSocket';
 
 const BingoPro = () => {
   const { telegramId } = useTelegram();
@@ -31,6 +31,7 @@ const BingoPro = () => {
   const [gamesRemaining, setGamesRemaining] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [nextGameCountdown, setNextGameCountdown] = useState(0);
 
   // WebSocket connections
   const { 
@@ -45,6 +46,15 @@ const BingoPro = () => {
     paymentVerified, 
     verificationMessage 
   } = usePaymentWebSocket(telegramId, gameMode);
+
+  // Global synchronized game WebSocket
+  const {
+    isConnected: isGlobalConnected,
+    globalGameState,
+    joinGlobalGame,
+    claimWin,
+    requestGameSchedule
+  } = useGlobalBingoWebSocket(telegramId, token, gameMode);
 
   // Enhanced Game Configuration with professional themes
   const gameConfig = {
@@ -291,15 +301,20 @@ const BingoPro = () => {
       setIsPlaying(false);
       playSound('win');
       
-      if (isBingoConnected) {
+      // Use global game win claim if connected to global game
+      if (isGlobalConnected && globalGameState.gameActive) {
+        claimWin(winResult.pattern);
+      } else if (isBingoConnected) {
         wsAnnounceWin(winResult.pattern);
       }
     }
-  }, [markedNumbers, checkWin, gameEnded, config, isBingoConnected, wsAnnounceWin, soundEnabled]);
+  }, [markedNumbers, checkWin, gameEnded, config, isBingoConnected, wsAnnounceWin, isGlobalConnected, globalGameState.gameActive, claimWin, soundEnabled]);
 
-  // Game loop with enhanced timing
+  // Game loop with enhanced timing - disabled for global sync
   useEffect(() => {
-    if (isPlaying && !gameEnded) {
+    // Local number calling is disabled when using global sync
+    // Numbers are now called by the server and received via WebSocket
+    if (isPlaying && !gameEnded && !isGlobalConnected) {
       const interval = setInterval(() => {
         const newNumber = callNumber();
         if (!newNumber) {
@@ -307,24 +322,33 @@ const BingoPro = () => {
           setGameEnded(true);
           setGameResult({ won: false, pattern: 'No Win', amount: 0 });
         }
-      }, 3000); // Slower pace for better UX
+      }, 3000);
 
       return () => clearInterval(interval);
     }
-  }, [isPlaying, gameEnded, callNumber]);
+  }, [isPlaying, gameEnded, callNumber, isGlobalConnected]);
 
-  // Enhanced timer
+  // Enhanced timer and countdown refresh
   useEffect(() => {
-    if (isPlaying) {
-      const timer = setInterval(() => {
+    const timer = setInterval(() => {
+      if (isPlaying) {
         setGameStats(prev => ({
           ...prev,
           timeElapsed: prev.timeElapsed + 1
         }));
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [isPlaying]);
+      }
+      
+      // Update countdown for next game
+      if (globalGameState.nextGameTime) {
+        const timeUntilNext = Math.max(0, Math.floor((globalGameState.nextGameTime - Date.now()) / 1000));
+        setNextGameCountdown(timeUntilNext);
+      } else {
+        setNextGameCountdown(0);
+      }
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [isPlaying, globalGameState.nextGameTime]);
 
   // Initialize on mount
   useEffect(() => {
@@ -347,11 +371,53 @@ const BingoPro = () => {
     }
   }, [gameState.winner, gameState.winningPattern, telegramId]);
 
+  // Global game state sync - handle synchronized numbers
+  useEffect(() => {
+    if (globalGameState.calledNumbers && globalGameState.gameActive) {
+      setCalledNumbers(globalGameState.calledNumbers);
+      if (globalGameState.lastCalledNumber) {
+        setCurrentNumber(globalGameState.lastCalledNumber);
+        playSound('number');
+      }
+      setGameStats(prev => ({
+        ...prev,
+        numbersLeft: 75 - globalGameState.calledNumbers.length
+      }));
+    }
+  }, [globalGameState.calledNumbers, globalGameState.lastCalledNumber, globalGameState.gameActive]);
+
+  // Auto-mark numbers in global game
+  useEffect(() => {
+    if (globalGameState.lastCalledNumber && autoPlay) {
+      const timer = setTimeout(() => {
+        markNumber(globalGameState.lastCalledNumber);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [globalGameState.lastCalledNumber, autoPlay]);
+
+  // Handle global game end
+  useEffect(() => {
+    if (!globalGameState.gameActive && isPlaying) {
+      setIsPlaying(false);
+      setGameEnded(true);
+      if (!gameResult) {
+        setGameResult({ won: false, pattern: 'Game Ended', amount: 0 });
+      }
+    }
+  }, [globalGameState.gameActive, isPlaying, gameResult]);
+
   const startGame = async () => {
     if (!betPlaced) {
       await placeBet();
       if (!betPlaced) return;
     }
+    
+    // Join the global synchronized game
+    if (isGlobalConnected) {
+      joinGlobalGame();
+    }
+    
     setIsPlaying(true);
   };
 
@@ -365,6 +431,21 @@ const BingoPro = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatCountdownTime = (totalSeconds) => {
+    if (totalSeconds <= 0) return "Starting soon...";
+    
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    
+    if (mins > 0) {
+      return `${mins}m ${secs}s`;
+    } else if (secs <= 10) {
+      return `${secs}s ⏰`;
+    } else {
+      return `${secs}s`;
+    }
   };
 
   const getColumnLetter = (colIndex) => ['B', 'I', 'N', 'G', 'O'][colIndex];
@@ -438,6 +519,8 @@ const BingoPro = () => {
           </div>
         </motion.div>
 
+
+
         {/* Enhanced Game Stats Dashboard */}
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
@@ -466,32 +549,59 @@ const BingoPro = () => {
           </div>
         </motion.div>
 
-        {/* Professional Current Number Display */}
-        <AnimatePresence>
-          {currentNumber && (
+        {/* Professional Game Status Display */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Countdown */}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center"
+          >
+            <div className="inline-flex flex-col items-center">
+              <div className="relative">
+                <div className="w-32 h-32 bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 rounded-full shadow-2xl flex items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
+                  <span className="text-2xl font-black text-white relative z-10">
+                    {globalGameState.countdown || (nextGameCountdown > 0 ? formatCountdownTime(nextGameCountdown) : '-')}
+                  </span>
+                </div>
+                {(globalGameState.countdown || nextGameCountdown > 0) && (
+                  <div className="absolute -inset-2 bg-gradient-to-r from-blue-400 to-purple-600 rounded-full opacity-30 animate-ping"></div>
+                )}
+              </div>
+              <div className="mt-4 text-xl font-bold text-white">Count Down</div>
+              <div className="text-sm text-gray-400 uppercase tracking-wider">
+                {globalGameState.countdown ? 'Game Starting' : 'Next Game'}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Current Call */}
+          <AnimatePresence>
             <motion.div
               key={currentNumber}
-              initial={{ scale: 0, rotate: -180, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              exit={{ scale: 0, rotate: 180, opacity: 0 }}
-              className="text-center mb-8"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-center"
             >
               <div className="inline-flex flex-col items-center">
                 <div className="relative">
                   <div className="w-32 h-32 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-full shadow-2xl flex items-center justify-center relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
-                    <span className="text-4xl font-black text-white relative z-10">{currentNumber}</span>
+                    <span className="text-4xl font-black text-white relative z-10">{currentNumber || '-'}</span>
                   </div>
-                  <div className="absolute -inset-2 bg-gradient-to-r from-yellow-400 to-red-500 rounded-full opacity-30 animate-ping"></div>
+                  {currentNumber && (
+                    <div className="absolute -inset-2 bg-gradient-to-r from-yellow-400 to-red-500 rounded-full opacity-30 animate-ping"></div>
+                  )}
                 </div>
-                <div className="mt-4 text-2xl font-bold text-white">
-                  {getColumnLetter(Math.floor((currentNumber - 1) / 15))}-{currentNumber}
+                <div className="mt-4 text-xl font-bold text-white">
+                  {currentNumber ? `${getColumnLetter(Math.floor((currentNumber - 1) / 15))}-${currentNumber}` : 'Current Call'}
                 </div>
                 <div className="text-sm text-gray-400 uppercase tracking-wider">Latest Call</div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </AnimatePresence>
+        </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Professional Bingo Grid */}

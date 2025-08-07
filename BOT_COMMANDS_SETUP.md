@@ -10,7 +10,6 @@ Your bot now has a **persistent menu** that appears when users:
 
 ### **2. Available Commands:**
 - `/playbingo` – Play Bingo Game 🎮
-- `/playspin` – Play Spin Game 🎰  
 - `/register` – Register your account 📱
 - `/balance` – Check your balance 💰
 - `/deposit` – Deposit funds 🏦
@@ -62,7 +61,6 @@ await bot.telegram.setMyCommands([
 
 ### **Test Each Command:**
 - `/playbingo` → Game selection menu
-- `/playspin` → Direct to spin game
 - `/register` → Registration flow or status
 - `/balance` → Detailed balance info
 - `/deposit` → Deposit instructions

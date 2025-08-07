@@ -35,7 +35,6 @@ The commands menu we already set up will automatically appear.
   ```
   /start - Start the bot
   /playbingo - Play Bingo Game 🎯
-  /playspin - Play Spin Game 🎰
   /register - Register your account 📱
   /balance - Check your balance 💰
   /deposit - Deposit funds 🏦
@@ -78,7 +77,6 @@ This gives users the **most professional experience**:
 Your bot already has these commands configured:
 - `/start` - Welcome message
 - `/playbingo` - Bingo game modes
-- `/playspin` - Spin wheel game
 - `/register` - Account registration
 - `/balance` - Check wallet balance
 - `/deposit` - Deposit information

@@ -37,7 +37,6 @@ npm start
 - `/support` - Support contact
 - `/invite` - Referral link
 - `/playbingo` - Game menu (buttons work, web app won't)
-- `/playspin` - Spin menu (buttons work, web app won't)
 
 ### **Step 3: Test Bot Interactions:**
 - Phone number sharing
@@ -57,7 +56,7 @@ npm start
    - See registration success
 5. **Test balance**: Send `/balance`
 6. **Test other commands**: `/support`, `/invite`, `/deposit`
-7. **Test game menus**: `/playbingo`, `/playspin`
+7. **Test game menus**: `/playbingo`
    - Menu buttons work
    - "Start Game" buttons show Terms of Service
    - Web app buttons won't work (expected)

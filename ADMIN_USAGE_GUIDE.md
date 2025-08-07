@@ -218,7 +218,6 @@ ADMIN_ID_2=another_admin_id_here
 
 ## 📞 **Support Contacts**
 
-- **Technical Support:** @beakal62
 - **Payment Agent:** @nati280
 - **System Admin:** Contact the bot owner
 

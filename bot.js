@@ -86,7 +86,7 @@ const PAYMENT_CONFIG = {
   minAmount: 50,
   maxAmount: 10000,
   supportedMethods: ['Telebirr', 'HelloCash', 'Bank Transfer'],
-  agentPhone: process.env.AGENT_PHONE || '09XXXXXXX',
+  agentPhone: process.env.AGENT_PHONE || '0967218959',
   agentName: process.env.AGENT_NAME || 'Payment Agent',
   bankAccount: '1000526054753',
   bankName: 'Ethiopian Commercial Bank',
@@ -115,10 +115,11 @@ const mainMenuKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('🎯 Play Bingo', 'play_bingo')],
   [Markup.button.callback('📝 Register', 'register')],
   [Markup.button.callback('💰 Deposit', 'deposit')],
+  [Markup.button.callback('🏧 Withdraw', 'withdraw')],
   [Markup.button.callback('💳 Check Balance', 'balance')],
   [Markup.button.callback('🎮 Instructions', 'instructions')],
   [Markup.button.callback('👥 Invite', 'invite')],
-  [Markup.button.callback('📞 Contact Support', 'support')]
+  [Markup.button.callback('📞 Contact Support', 'support')],
 ]);
 
 // Bingo game modes keyboard
@@ -128,7 +129,6 @@ const bingoModesKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('🎯 Play Bingo 50', 'bingo_50')],
   [Markup.button.callback('🎯 Play Bingo 100', 'bingo_100')],
   [Markup.button.callback('🎯 Play Bingo Demo', 'bingo_demo')],
-  [Markup.button.callback('🎮 Like Bingo (NEW)', 'like_bingo')],
   [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
 ]);
 
@@ -243,9 +243,56 @@ Ready to start your adventure? Click the button below!
 
 // Main menu action
 bot.action('main_menu', async (ctx) => {
-  await ctx.editMessageText('🎮 **Welcome to Bingo!** Choose an option below:', {
+  const telegramId = ctx.from.id.toString();
+  const user = await User.findOne({ telegramId });
+  
+  if (!user) {
+    await ctx.editMessageText(
+      '❌ **User not found**\n\nPlease register first to access the menu.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('📝 Register', 'register')]
+        ]).reply_markup
+      }
+    );
+    return;
+  }
+  
+  const gameAccess = getUserGameAccess(user.balance);
+  const availableGames = Object.values(gameAccess).filter(game => game.available);
+  const lockedGames = Object.values(gameAccess).filter(game => !game.available);
+  
+  let message = `🎮 **Welcome to the Gaming Platform!**
+
+💰 **Your Balance:** ${user.balance} coins
+🎁 **Bonus:** ${user.bonus} coins
+
+🎯 **Available Games:**\n`;
+  
+  availableGames.forEach(game => {
+    message += `✅ ${game.name} ${game.cost > 0 ? `(${game.cost} coins)` : '(Free)'}\n`;
+  });
+  
+  if (lockedGames.length > 0) {
+    message += `\n🔒 **Locked Games:**\n`;
+    lockedGames.forEach(game => {
+      const needed = game.cost - user.balance;
+      message += `❌ ${game.name} - Need ${needed} more coins\n`;
+    });
+  }
+  
+  message += `\n💡 **Need more coins?** Use the Deposit button below!`;
+  
+  await ctx.editMessageText(message, {
     parse_mode: 'Markdown',
-    reply_markup: mainMenuKeyboard.reply_markup
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+      [Markup.button.callback('💰 Deposit', 'deposit')],
+      [Markup.button.callback('🏧 Withdraw', 'withdraw')],
+      [Markup.button.callback('💳 Check Balance', 'balance')],
+      [Markup.button.callback('📞 Support', 'support')]
+    ]).reply_markup
   });
 });
 
@@ -1216,15 +1263,7 @@ bot.command('playbingo', async (ctx) => {
   }
 });
 
-bot.command('playspin', async (ctx) => {
-  if (await checkUserRegistration(ctx, 'play_spin')) {
-    await ctx.reply('🎰 Ready for the Spin Wheel?\n\nBy launching this mini app, you agree to the Terms of Service for Mini Apps.', 
-      Markup.inlineKeyboard([
-        [Markup.button.webApp('🎰 Start Spin Game', `${process.env.WEB_APP_URL}/spin`)],
-      ])
-    );
-  }
-});
+
 
 bot.command('likebingo', async (ctx) => {
   if (await checkUserRegistration(ctx, 'like_bingo')) {
@@ -1354,10 +1393,11 @@ bot.command('menu', async (ctx) => {
         [Markup.button.callback('🎯 Play Bingo', 'play_bingo')],
         [Markup.button.callback('📝 Register', 'register')],
         [Markup.button.callback('💰 Deposit', 'deposit')],
+        [Markup.button.callback('🏧 Withdraw', 'withdraw')],
         [Markup.button.callback('💳 Check Balance', 'balance')],
         [Markup.button.callback('🎮 Instructions', 'instructions')],
         [Markup.button.callback('👥 Invite', 'invite')],
-        [Markup.button.callback('📞 Contact Support', 'support')]
+        [Markup.button.callback('📞 Contact Support', 'support')],
       ]).reply_markup
     }
   );
@@ -1469,7 +1509,6 @@ bot.command('play', async (ctx) => {
 
     // Add purchase options
     buttons.push([Markup.button.callback('💰 Buy Bingo Games', 'play_bingo')]);
-    buttons.push([Markup.button.callback('🎰 Play Spin Wheel', 'play_spin')]);
 
     await ctx.reply(message, {
       parse_mode: 'Markdown',
@@ -1645,23 +1684,21 @@ bot.on('text', async (ctx) => {
     const amount = ctx.session.depositAmount;
     const paymentMethod = ctx.session.paymentMethod;
     
-    // Forward to admin for verification
-    const adminMessage = `🔔 **New Payment Verification Request**\n\n` +
-      `👤 **User:** @${username}\n` +
-      `🆔 **ID:** \`${userId}\`\n` +
-      `💰 **Amount:** ${amount} ETB\n` +
-      `🏦 **Method:** ${paymentMethod}\n` +
-      `📱 **Transaction Details:**\n` +
-      `\`\`\`\n${ctx.message.text}\n\`\`\`\n\n` +
-      `📋 **Action Required:**\n` +
-      `• Verify the payment\n` +
-      `• Use /addpoints @${username} ${amount} to credit user`;
+    // Enhanced admin notification with better formatting
+    const adminMessage = `🔔 **New Payment Verification Request**\n\n👤 **User:** @${username}\n🆔 **ID:** \`${userId}\`\n💰 **Amount:** ${amount} ETB\n🏦 **Method:** ${paymentMethod}\n📱 **Transaction Details:**\n\`\`\`\n${ctx.message.text}\n\`\`\`\n\n📋 **Action Required:**\n• Verify the payment details above\n• Click the button below to credit the user\n• User will be automatically notified when points are added`;
+
+    const creditButton = Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Credit User', `credit_${userId}_${amount}`)]
+    ]);
 
     // Send to all payment agents
     let notifiedAgents = 0;
     for (const agentId of PAYMENT_AGENTS) {
       try {
-        await bot.telegram.sendMessage(agentId, adminMessage, { parse_mode: 'Markdown' });
+        await bot.telegram.sendMessage(agentId, adminMessage, {
+          parse_mode: 'Markdown',
+          reply_markup: creditButton.reply_markup
+        });
         notifiedAgents++;
         console.log(`✅ Successfully notified agent ${agentId}`);
       } catch (error) {
@@ -1678,14 +1715,17 @@ bot.on('text', async (ctx) => {
       console.log(`✅ Successfully notified ${notifiedAgents}/${PAYMENT_AGENTS.length} agents`);
     }
 
-    // Confirm to user
+    // Enhanced user confirmation
     await ctx.reply(
-      `✅ **Payment Details Submitted**\n\n` +
-      `📱 Your payment details have been sent to our agents for verification.\n` +
-      `⏱️ Please wait 5-15 minutes for processing.\n\n` +
-      `📞 **If you need help:**\n` +
-      `• Contact support: @nati280\n` +
-      `• Or use the "Contact Support" button below`,
+      `✅ **Payment Details Submitted Successfully!**
+
+📱 Your payment details have been sent to our verification team.
+⏱️ **Processing Time:** 5-15 minutes
+
+📞 **Need Help?**
+• Support: @nati280 (support)
+
+🎮 **Once verified, you'll receive a notification and can play all games!**`,
       { parse_mode: 'Markdown' }
     );
 
@@ -1718,8 +1758,7 @@ bot.action('payment_cbe', async (ctx) => {
     `📢 **Notes:**\n` +
     `- Only send to the above **CBE account**. If you send to a different agent's account, 2% will be deducted before crediting.\n` +
     `- If you face any issues, contact:\n` +
-    `  - 💬 @nati280 (agent)\n` +
-    `  - 🛠 @beakal62 (support)\n\n` +
+    `  - 🛠 @nati280 (support)\n\n` +
     `✍️ **Now, please paste the full SMS here:**\n` +
     `👇👇👇`;
 
@@ -1753,8 +1792,7 @@ bot.action('payment_telebirr', async (ctx) => {
     `📢 **Notes:**\n` +
     `- Only send to the above **Telebirr account**. If you send to a different agent, 2% will be deducted before crediting.\n` +
     `- If you face any issues, contact:\n` +
-    `  - 💬 @aqua9170 (agent)\n` +
-    `  - 🛠 @beakal62 (support)\n\n` +
+    `  - 🛠 @nati280 (support)\n\n` +
     `✍️ **Now, please paste the full SMS here:**\n` +
     `👇👇👇`;
 
@@ -1821,14 +1859,16 @@ bot.command('addpoints', async (ctx) => {
   const args = ctx.message.text.split(' ');
   if (args.length !== 3) {
     await ctx.reply(
-      '📝 **Usage:** /addpoints @username amount_in_birr\n\n' +
+      '📝 **Usage:** /addpoints <username|telegramId> amount_in_birr\n\n' +
       '**Example:** /addpoints @john 100\n' +
-      '💡 Points will be equal to the amount in Birr (1 Birr = 1 point)'
+      '**Example:** /addpoints 123456789 100\n' +
+      '💡 Points will be equal to the amount in Birr (1 Birr = 1 point)\n' +
+      '⚠️ For best results, use the Telegram ID (numeric) shown in the payment request.'
     );
     return;
   }
 
-  const username = args[1].replace('@', '');
+  const identifier = args[1].replace('@', '');
   const amountInBirr = parseInt(args[2]);
   const pointsToAdd = amountInBirr * PAYMENT_CONFIG.pointRate; // 1 Birr = 1 point
 
@@ -1837,14 +1877,20 @@ bot.command('addpoints', async (ctx) => {
     return;
   }
 
-  try {
-    // Find user by username
-    const user = await User.findOne({ username: username });
-    if (!user) {
-      await ctx.reply(`❌ User @${username} not found. Make sure they have registered.`);
-      return;
-    }
+  let user = null;
+  // Try username first
+  user = await User.findOne({ username: identifier });
+  // If not found and identifier is numeric, try telegramId
+  if (!user && /^\d+$/.test(identifier)) {
+    user = await User.findOne({ telegramId: identifier });
+  }
 
+  if (!user) {
+    await ctx.reply(`❌ User @${identifier} not found. Make sure they have registered. Try using their Telegram ID if username fails.`);
+    return;
+  }
+
+  try {
     // Update balance
     user.balance += pointsToAdd;
     await user.save();
@@ -1852,38 +1898,54 @@ bot.command('addpoints', async (ctx) => {
     // Log transaction
     const payment = new Payment({
       userId: user.telegramId,
-      username: username,
+      username: user.username || 'no_username',
       amount: pointsToAdd,
       type: 'deposit',
       status: 'completed',
       approvedBy: adminId,
       transactionId: `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       paymentMethod: 'Bank Transfer/Mobile Money',
-      adminNotes: `Payment: ${amountInBirr} Birr = ${pointsToAdd} points`
+      adminNotes: `Payment: ${amountInBirr} Birr = ${pointsToAdd} points (via inline button)`
     });
     await payment.save();
 
-    // Notify user
+    // Enhanced user notification with game access information
+    let userNotified = false;
+    let userNotifyError = null;
     try {
       await bot.telegram.sendMessage(
         user.telegramId,
-        `✅ **Payment Confirmed!**\n\n` +
-        `💰 **Payment:** ${amountInBirr} Birr\n` +
-        `🎯 **Points Added:** ${pointsToAdd} points\n` +
-        `📈 **New Balance:** ${user.balance} points\n\n` +
-        `🎮 You can now play games!\n` +
-        `Use /play to start playing.`,
-        { parse_mode: 'Markdown' }
+        `✅ **Payment Verified Successfully!**\n\n💰 **Payment Details:**\n• Amount: ${amountInBirr} ETB\n• Points Added: ${pointsToAdd} coins\n• New Balance: ${user.balance} coins\n\n🎮 **You can now play all games:**\n• 🎯 Bingo 10 (10 coins)\n• 🎯 Bingo 20 (20 coins) \n• 🎯 Bingo 50 (50 coins)\n• 🎯 Bingo 100 (100 coins)\n\n🚀 **Start Playing:**\nUse /playbingo to begin!\n\nThank you for your payment! 🎉`,
+        { 
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🎮 Play Bingo', callback_data: 'play_bingo' }],
+              [{ text: '💰 Check Balance', callback_data: 'balance' }]
+            ]
+          }
+        }
       );
+      userNotified = true;
     } catch (error) {
+      userNotifyError = error;
       console.error('Failed to notify user:', error);
     }
 
-    // Confirm to admin
-    await ctx.reply(
-      `✅ ${pointsToAdd} points have been added to @${username}'s wallet.`,
-      { parse_mode: 'Markdown' }
-    );
+    // Enhanced admin confirmation
+    let adminMessage =
+      `✅ **Payment Processed Successfully!**\n\n` +
+      `👤 **User:** @${user.username || identifier} (ID: ${user.telegramId})\n` +
+      `💰 **Amount:** ${amountInBirr} ETB\n` +
+      `🎯 **Points Added:** ${pointsToAdd} coins\n` +
+      `📊 **New Balance:** ${user.balance} coins\n`;
+    if (userNotified) {
+      adminMessage += `\n✅ User has been notified and can now play all games.`;
+    } else {
+      adminMessage += `\n❌ *User could NOT be notified.*\nReason: ${userNotifyError?.description || userNotifyError?.message || userNotifyError}`;
+      adminMessage += `\n\n*Possible reasons:*\n- User has not started the bot\n- User blocked the bot\n- Telegram error`;
+    }
+    await ctx.reply(adminMessage, { parse_mode: 'Markdown' });
 
   } catch (error) {
     console.error('Error adding points:', error);
@@ -2059,7 +2121,6 @@ bot.launch().then(async () => {
     await bot.telegram.setMyCommands([
       { command: 'menu', description: '📋 Main Menu - All Options' },
       { command: 'playbingo', description: '🎯 Play Bingo Game' },
-      { command: 'likebingo', description: '🎱 Play Like Bingo (NEW)' },
       { command: 'register', description: '📱 Register your account' },
       { command: 'balance', description: '💰 Check your balance' },
       { command: 'deposit', description: '🏦 Deposit funds' },
@@ -2289,8 +2350,7 @@ bot.command('removepoints', async (ctx) => {
         `📉 **Previous Balance:** ${oldBalance} points\n` +
         `📉 **New Balance:** ${user.balance} points\n\n` +
         `📞 **Contact support if this was an error.**\n` +
-        `• Support: @nati280\n` +
-        `• Technical: @beakal62`,
+        `• Support: @nati280`,
         { parse_mode: 'Markdown' }
       );
     } catch (error) {
@@ -2451,8 +2511,260 @@ bot.command('adminhelp', async (ctx) => {
     `✅ Pending payment detection\n` +
     `✅ Detailed transaction history\n\n` +
     `📞 **Support:**\n` +
-    `• Technical: @beakal62\n` +
-    `• Agent: @nati280`;
+    `• Support: @nati280`;
 
   await ctx.reply(helpMessage, { parse_mode: 'Markdown' });
+});
+
+// Helper function to check user's game access based on balance
+function getUserGameAccess(userBalance) {
+  const games = {
+    demo: { name: 'Bingo Demo', cost: 0, available: true },
+    bingo_10: { name: 'Bingo 10', cost: 10, available: userBalance >= 10 },
+    bingo_20: { name: 'Bingo 20', cost: 20, available: userBalance >= 20 },
+    bingo_50: { name: 'Bingo 50', cost: 50, available: userBalance >= 50 },
+    bingo_100: { name: 'Bingo 100', cost: 100, available: userBalance >= 100 }
+  };
+  
+  return games;
+}
+
+// Enhanced balance display with game access information
+bot.action('balance', async (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const user = await User.findOne({ telegramId });
+  
+  if (!user) {
+    await ctx.answerCbQuery('❌ User not found. Please register first.', { show_alert: true });
+    return;
+  }
+  
+  const gameAccess = getUserGameAccess(user.balance);
+  const availableGames = Object.values(gameAccess).filter(game => game.available);
+  const lockedGames = Object.values(gameAccess).filter(game => !game.available);
+  
+  let message = `💰 **Your Wallet Balance**
+
+💎 **Balance:** ${user.balance} coins
+🎁 **Bonus:** ${user.bonus} coins
+📊 **Total:** ${user.balance + user.bonus} coins
+
+🎮 **Available Games:**\n`;
+  
+  availableGames.forEach(game => {
+    message += `✅ ${game.name} ${game.cost > 0 ? `(${game.cost} coins)` : '(Free)'}\n`;
+  });
+  
+  if (lockedGames.length > 0) {
+    message += `\n🔒 **Locked Games:**\n`;
+    lockedGames.forEach(game => {
+      const needed = game.cost - user.balance;
+      message += `❌ ${game.name} - Need ${needed} more coins\n`;
+    });
+  }
+  
+  message += `\n💡 **To unlock more games:** Use /deposit to add coins to your wallet!`;
+  
+  await ctx.editMessageText(message, {
+    parse_mode: 'Markdown',
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback('🎮 Play Games', 'play_bingo')],
+      [Markup.button.callback('💰 Deposit', 'deposit')],
+      [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+    ]).reply_markup
+  });
+});
+
+// Add a new handler for the credit button
+bot.action(/credit_(\d+)_(\d+)/, async (ctx) => {
+  const adminId = ctx.from.id.toString();
+  console.log(`[CREDIT BUTTON] Clicked by adminId: ${adminId}`);
+  if (!PAYMENT_AGENTS.includes(adminId)) {
+    await ctx.answerCbQuery('❌ Access Denied. Only authorized payment agents can credit users.', { show_alert: true });
+    console.log(`[CREDIT BUTTON] Access denied for adminId: ${adminId}`);
+    return;
+  }
+  const userId = ctx.match[1];
+  const amountInBirr = parseInt(ctx.match[2]);
+  const pointsToAdd = amountInBirr * PAYMENT_CONFIG.pointRate;
+  console.log(`[CREDIT BUTTON] Attempting to credit userId: ${userId} with amount: ${amountInBirr} (${pointsToAdd} points)`);
+  let user = null;
+  try {
+    user = await User.findOne({ telegramId: userId });
+    if (!user) {
+      await ctx.answerCbQuery('❌ User not found. Make sure they have registered.', { show_alert: true });
+      await ctx.reply(`❌ User with Telegram ID ${userId} not found. Cannot credit user.`);
+      console.log(`[CREDIT BUTTON] User not found: ${userId}`);
+      return;
+    }
+    user.balance += pointsToAdd;
+    await user.save();
+    // Log transaction
+    const payment = new Payment({
+      userId: user.telegramId,
+      username: user.username || 'no_username',
+      amount: pointsToAdd,
+      type: 'deposit',
+      status: 'completed',
+      approvedBy: adminId,
+      transactionId: `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      paymentMethod: 'Bank Transfer/Mobile Money',
+      adminNotes: `Payment: ${amountInBirr} Birr = ${pointsToAdd} points (via inline button)`
+    });
+    await payment.save();
+    // Notify user
+    let userNotified = false;
+    let userNotifyError = null;
+    try {
+      await bot.telegram.sendMessage(
+        user.telegramId,
+        `✅ **Payment Verified Successfully!**\n\n💰 **Payment Details:**\n• Amount: ${amountInBirr} ETB\n• Points Added: ${pointsToAdd} coins\n• New Balance: ${user.balance} coins\n\n🎮 **You can now play all games:**\n• 🎯 Bingo 10 (10 coins)\n• 🎯 Bingo 20 (20 coins) \n• 🎯 Bingo 50 (50 coins)\n• 🎯 Bingo 100 (100 coins)\n\n🚀 **Start Playing:**\nUse /playbingo to begin!\n\nThank you for your payment! 🎉`,
+        { 
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🎮 Play Bingo', callback_data: 'play_bingo' }],
+              [{ text: '💰 Check Balance', callback_data: 'balance' }]
+            ]
+          }
+        }
+      );
+      userNotified = true;
+      console.log(`[CREDIT BUTTON] User notified: ${userId}`);
+    } catch (error) {
+      userNotifyError = error;
+      console.error(`[CREDIT BUTTON] Failed to notify user: ${userId}`, error);
+      await ctx.reply(`❌ User was credited, but could NOT be notified.\nReason: ${userNotifyError?.description || userNotifyError?.message || userNotifyError}`);
+    }
+    // Notify admin
+    let adminMessage =
+      `✅ **User Credited!**\n\n👤 **User:** @${user.username || userId} (ID: ${user.telegramId})\n💰 **Amount:** ${amountInBirr} ETB\n🎯 **Points Added:** ${pointsToAdd} coins\n📊 **New Balance:** ${user.balance} coins\n`;
+    if (userNotified) {
+      adminMessage += `\n✅ User has been notified and can now play all games.`;
+    } else {
+      adminMessage += `\n❌ *User could NOT be notified.*`;
+    }
+    await ctx.reply(adminMessage, { parse_mode: 'Markdown' });
+    await ctx.answerCbQuery('✅ User credited!');
+  } catch (err) {
+    console.error(`[CREDIT BUTTON] Error during credit process:`, err);
+    await ctx.reply('❌ Error processing credit. Please try again.');
+    await ctx.answerCbQuery('❌ Error processing credit.', { show_alert: true });
+  }
+});
+
+// Add Withdraw menu to main menu
+// (Add this button to your main menu reply_markup)
+// [Markup.button.callback('🏧 Withdraw', 'withdraw')],
+
+// Withdraw action handler for main menu button
+bot.action('withdraw', async (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const user = await User.findOne({ telegramId });
+  if (!user) {
+    await ctx.editMessageText('❌ You need to register first!', {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('📝 Register Now', 'register')],
+        [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+      ]).reply_markup
+    });
+    return;
+  }
+  // Check if user has played at least 3 games
+  if (!user.gameHistory || user.gameHistory.length < 3) {
+    await ctx.editMessageText('❌ You must play at least 3 games before you can withdraw.\n\n🎮 Play more games to unlock withdrawals!', {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+        [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+      ]).reply_markup
+    });
+    return;
+  }
+  // Start withdraw flow
+  ctx.session.withdrawState = 'waiting_for_method';
+  await ctx.editMessageText(
+    `🏧 **Withdraw Flow**\n\nChoose your preferred withdrawal method:`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🏦 CBE Bank', 'withdraw_cbe')],
+        [Markup.button.callback('📱 Telebirr', 'withdraw_telebirr')],
+        [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+      ]).reply_markup
+    }
+  );
+});
+
+// Withdraw CBE handler
+bot.action('withdraw_cbe', async (ctx) => {
+  ctx.session.withdrawState = 'waiting_for_cbe_account';
+  ctx.session.withdrawMethod = 'CBE Bank';
+  await ctx.editMessageText(
+    `🏦 **CBE Bank Withdrawal**\n\nPlease enter your CBE account number to receive your withdrawal.`,
+    { parse_mode: 'Markdown' }
+  );
+});
+
+// Withdraw Telebirr handler
+bot.action('withdraw_telebirr', async (ctx) => {
+  ctx.session.withdrawState = 'waiting_for_telebirr_account';
+  ctx.session.withdrawMethod = 'Telebirr';
+  await ctx.editMessageText(
+    `📱 **Telebirr Withdrawal**\n\nPlease enter your Telebirr phone number to receive your withdrawal.`,
+    { parse_mode: 'Markdown' }
+  );
+});
+
+// Handle text input for withdraw flow
+bot.on('text', async (ctx, next) => {
+  if (ctx.session && ctx.session.withdrawState) {
+    const telegramId = ctx.from.id.toString();
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      await ctx.reply('❌ You need to register first!');
+      return;
+    }
+    if (ctx.session.withdrawState === 'waiting_for_cbe_account') {
+      ctx.session.withdrawAccount = ctx.message.text.trim();
+      ctx.session.withdrawState = 'waiting_for_amount';
+      await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
+      return;
+    }
+    if (ctx.session.withdrawState === 'waiting_for_telebirr_account') {
+      ctx.session.withdrawAccount = ctx.message.text.trim();
+      ctx.session.withdrawState = 'waiting_for_amount';
+      await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
+      return;
+    }
+    if (ctx.session.withdrawState === 'waiting_for_amount') {
+      const amount = parseInt(ctx.message.text.trim());
+      if (isNaN(amount) || amount <= 0) {
+        await ctx.reply('❌ Invalid amount. Please enter a valid number in ETB.');
+        return;
+      }
+      if (amount > user.balance) {
+        await ctx.reply(`❌ You do not have enough balance to withdraw ${amount} ETB. Your current balance is ${user.balance} coins.`);
+        return;
+      }
+      // Save withdrawal request (for now, just notify admin)
+      ctx.session.withdrawAmount = amount;
+      ctx.session.withdrawState = null;
+      // Notify admin(s)
+      const adminMessage = `🔔 **New Withdrawal Request**\n\n👤 **User:** @${user.username || 'no_username'}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🏦 **Method:** ${ctx.session.withdrawMethod}\n📱 **Account:** ${ctx.session.withdrawAccount}\n\nPlease review and process this withdrawal.`;
+      for (const agentId of PAYMENT_AGENTS) {
+        try {
+          await bot.telegram.sendMessage(agentId, adminMessage, { parse_mode: 'Markdown' });
+        } catch (error) {
+          console.error(`❌ Failed to notify agent ${agentId}:`, error.message);
+        }
+      }
+      await ctx.reply('✅ Your withdrawal request has been submitted! Our team will review and process it soon.');
+      // Optionally, deduct the amount from user.balance here if you want to lock funds
+      // user.balance -= amount; await user.save();
+      return;
+    }
+  }
+  // If not in withdraw flow, continue to next handler
+  return next();
 });

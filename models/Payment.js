@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const paymentSchema = new mongoose.Schema({
   // User information
   userId: { type: String, required: true }, // Telegram user ID
-  username: { type: String, required: true }, // Telegram username
+  username: { type: String }, // not required
   firstName: String, // User's first name
   
   // Payment details

@@ -106,7 +106,6 @@ POST /api/admin/ban/:userId         // Admin: ban user
 ### **Command System:**
 ```
 /playbingo  → Game mode selection → Terms → Mini app
-/playspin   → Direct to spin → Terms → Mini app  
 /register   → Phone sharing flow
 /balance    → Detailed wallet info
 /deposit    → Payment instructions

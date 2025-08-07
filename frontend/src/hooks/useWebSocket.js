@@ -267,3 +267,187 @@ export const useBingoWebSocket = (telegramId, token, roomId = 'default') => {
     announceWin
   };
 };
+
+// Hook for Global Synchronized Bingo Game
+export const useGlobalBingoWebSocket = (telegramId, token, gameMode = 'demo') => {
+  const { isConnected, lastMessage, sendMessage } = useWebSocket(telegramId, token, 'global_bingo');
+  const [globalGameState, setGlobalGameState] = useState({
+    currentGame: null,
+    nextGameTime: null,
+    timeUntilGame: null,
+    isInGame: false,
+    calledNumbers: [],
+    gameActive: false,
+    winners: [],
+    playersCount: 0,
+    countdown: null,
+    gameSchedule: null
+  });
+
+  // Request game schedule when connected
+  useEffect(() => {
+    if (isConnected) {
+      sendMessage({
+        type: 'request_game_schedule'
+      });
+    }
+  }, [isConnected, sendMessage]);
+
+  // Handle global game messages
+  useEffect(() => {
+    if (!lastMessage) return;
+
+    switch (lastMessage.type) {
+      case 'connected':
+        if (lastMessage.nextGameTime || lastMessage.currentGame) {
+          setGlobalGameState(prev => ({
+            ...prev,
+            nextGameTime: lastMessage.nextGameTime,
+            currentGame: lastMessage.currentGame,
+            gameActive: lastMessage.currentGame?.isActive || false,
+            calledNumbers: lastMessage.currentGame?.calledNumbers || [],
+            playersCount: lastMessage.currentGame?.playersCount || 0
+          }));
+        }
+        break;
+
+      case 'game_schedule':
+        setGlobalGameState(prev => ({
+          ...prev,
+          currentGame: lastMessage.currentGame,
+          nextGameTime: lastMessage.nextGameTime,
+          timeUntilNextGame: lastMessage.timeUntilNextGame,
+          gameSchedule: lastMessage
+        }));
+        break;
+
+      case 'next_game_scheduled':
+        setGlobalGameState(prev => ({
+          ...prev,
+          nextGameTime: lastMessage.nextGameTime,
+          timeUntilGame: lastMessage.timeUntilGame
+        }));
+        break;
+
+      case 'next_game_update':
+        setGlobalGameState(prev => ({
+          ...prev,
+          nextGameTime: lastMessage.nextGameTime,
+          timeUntilGame: lastMessage.timeUntilGame
+        }));
+        break;
+
+      case 'game_countdown':
+        setGlobalGameState(prev => ({
+          ...prev,
+          countdown: lastMessage.countdown
+        }));
+        break;
+
+      case 'global_game_started':
+        setGlobalGameState(prev => ({
+          ...prev,
+          currentGame: {
+            id: lastMessage.gameId,
+            startTime: lastMessage.startTime,
+            isActive: true
+          },
+          gameActive: true,
+          calledNumbers: [],
+          winners: [],
+          countdown: null
+        }));
+        break;
+
+      case 'global_game_joined':
+        setGlobalGameState(prev => ({
+          ...prev,
+          isInGame: true,
+          playersCount: lastMessage.playersCount,
+          calledNumbers: lastMessage.calledNumbers,
+          currentGame: {
+            id: lastMessage.gameId,
+            isActive: true
+          },
+          nextGameTime: lastMessage.nextGameTime,
+          timeUntilGame: lastMessage.timeUntilNextGame
+        }));
+        break;
+
+      case 'waiting_for_next_game':
+        setGlobalGameState(prev => ({
+          ...prev,
+          isInGame: false,
+          nextGameTime: lastMessage.nextGameTime,
+          timeUntilGame: lastMessage.timeUntilGame
+        }));
+        break;
+
+      case 'global_number_called':
+        setGlobalGameState(prev => ({
+          ...prev,
+          calledNumbers: lastMessage.calledNumbers,
+          lastCalledNumber: lastMessage.number
+        }));
+        break;
+
+      case 'global_game_win':
+        setGlobalGameState(prev => ({
+          ...prev,
+          winners: [...prev.winners, {
+            telegramId: lastMessage.winner,
+            name: lastMessage.winnerName,
+            pattern: lastMessage.winPattern,
+            position: lastMessage.position
+          }]
+        }));
+        break;
+
+      case 'global_game_ended':
+        setGlobalGameState(prev => ({
+          ...prev,
+          gameActive: false,
+          isInGame: false,
+          currentGame: null,
+          calledNumbers: [],
+          winners: lastMessage.winners || prev.winners
+        }));
+        break;
+
+      default:
+        break;
+    }
+  }, [lastMessage]);
+
+  const joinGlobalGame = () => {
+    sendMessage({
+      type: 'join_global_game',
+      gameMode: gameMode,
+      token: token
+    });
+  };
+
+  const claimWin = (winPattern) => {
+    if (globalGameState.currentGame) {
+      sendMessage({
+        type: 'global_game_win',
+        gameId: globalGameState.currentGame.id,
+        winPattern: winPattern
+      });
+    }
+  };
+
+  const requestGameSchedule = () => {
+    sendMessage({
+      type: 'request_game_schedule'
+    });
+  };
+
+  return {
+    isConnected,
+    globalGameState,
+    joinGlobalGame,
+    claimWin,
+    requestGameSchedule
+  };
+};

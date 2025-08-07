@@ -34,7 +34,6 @@ You should see:
 1. **Open your bot** in Telegram
 2. **Type "/"** - you should see all 7 commands:
    - /playbingo – Play Bingo Game 🎮
-   - /playspin – Play Spin Game 🎰
    - /register – Register your account 📱
    - /balance – Check your balance 💰
    - /deposit – Deposit funds 🏦

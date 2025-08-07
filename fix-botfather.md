@@ -32,7 +32,7 @@ https://5a6fdd935cb2.ngrok-free.app
 ## Alternative: Use Bot Commands
 Instead of menu button, your bot also has these commands:
 - `/playbingo` - Play Bingo games
-- `/playspin` - Play Spin game  
+
 - `/register` - Register account
 - `/balance` - Check balance
 
@@ -57,6 +57,6 @@ npm start
 Try these in your bot chat:
 - `/start`
 - `/playbingo`
-- `/playspin`
+
 
 These should work even if menu button doesn't!

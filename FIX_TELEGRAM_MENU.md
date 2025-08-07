@@ -1,7 +1,7 @@
 # 🔧 Fix Telegram Bot Menu - Show Commands Instead of Just "Play Game"
 
 ## 🚨 **Problem:**
-You only see "Play Game" button instead of the full commands menu with /playbingo, /playspin, etc.
+You only see "Play Game" button instead of the full commands menu with /playbingo, etc.
 
 ## ✅ **Solution: Clear BotFather Settings & Restart**
 
@@ -74,7 +74,6 @@ bot.launch().then(async () => {
 
 ### **Commands Available:**
 - /playbingo – Play Bingo Game 🎮
-- /playspin – Play Spin Game 🎰
 - /register – Register your account 📱
 - /balance – Check your balance 💰
 - /deposit – Deposit funds 🏦
