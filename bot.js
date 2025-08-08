@@ -2768,3 +2768,27 @@ bot.on('text', async (ctx, next) => {
   // If not in withdraw flow, continue to next handler
   return next();
 });
+
+// Add HTTP server for Render deployment
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'Telegram Bot is running!', 
+    timestamp: new Date().toISOString() 
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌐 HTTP server running on port ${PORT} for Render deployment`);
+});
