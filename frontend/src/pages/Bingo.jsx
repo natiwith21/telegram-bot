@@ -102,7 +102,7 @@ const Bingo = () => {
       
       // API call to award coins
       if (telegramId && gameMode !== 'demo') {
-        fetch(`http://localhost:3001/api/bingo-win/${telegramId}`, {
+        fetch(`https://telegram-bot-2-rffp.onrender.com/api/bingo-win/${telegramId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 

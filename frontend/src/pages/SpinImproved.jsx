@@ -110,7 +110,7 @@ const SpinImproved = () => {
     if (!telegramId) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/user/${telegramId}`);
+      const response = await fetch(`https://telegram-bot-2-rffp.onrender.com/api/user/${telegramId}`);
       if (response.ok) {
         const data = await response.json();
         setUserBalance({ balance: data.balance, bonus: data.bonus });
@@ -171,7 +171,7 @@ const SpinImproved = () => {
       // Send result to backend
       if (telegramId && selectedPrize.type !== 'lose') {
         try {
-          const response = await fetch(`http://localhost:3001/api/spin-result/${telegramId}`, {
+          const response = await fetch(`https://telegram-bot-2-rffp.onrender.com/api/spin-result/${telegramId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

@@ -116,7 +116,7 @@ const LikeBingo = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:3001/api/user/${telegramId}`);
+      const response = await fetch(`https://telegram-bot-2-rffp.onrender.com/api/user/${telegramId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -216,7 +216,7 @@ const LikeBingo = () => {
       }
 
       // Fallback to local game if WebSocket not connected
-      const response = await fetch(`http://localhost:3001/api/like-bingo-play`, {
+      const response = await fetch(`https://telegram-bot-2-rffp.onrender.com/api/like-bingo-play`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

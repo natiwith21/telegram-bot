@@ -93,7 +93,7 @@ const BingoPro = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/validate-token/${telegramId}?token=${token}`);
+      const response = await fetch(`https://telegram-bot-2-rffp.onrender.com/api/validate-token/${telegramId}?token=${token}`);
       const data = await response.json();
 
       if (data.success) {
@@ -163,7 +163,7 @@ const BingoPro = () => {
     if (!isValidToken) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/bingo-bet/${telegramId}`, {
+      const response = await fetch(`https://telegram-bot-2-rffp.onrender.com/api/bingo-bet/${telegramId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameMode, token })

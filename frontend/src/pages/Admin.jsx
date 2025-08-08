@@ -24,7 +24,7 @@ const Admin = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/users');
+      const response = await fetch('https://telegram-bot-2-rffp.onrender.com/api/admin/users');
       const data = await response.json();
       setUsers(data);
     } catch (error) {
@@ -34,7 +34,7 @@ const Admin = () => {
 
   const fetchGameHistory = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/game-history');
+      const response = await fetch('https://telegram-bot-2-rffp.onrender.com/api/admin/game-history');
       const data = await response.json();
       setGameHistory(data);
     } catch (error) {
@@ -44,7 +44,7 @@ const Admin = () => {
 
   const updateUser = async (userId) => {
     try {
-      await fetch(`http://localhost:3001/api/admin/user/${userId}`, {
+      await fetch(`https://telegram-bot-2-rffp.onrender.com/api/admin/user/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,7 +62,7 @@ const Admin = () => {
 
   const banUser = async (userId) => {
     try {
-      await fetch(`http://localhost:3001/api/admin/ban/${userId}`, {
+      await fetch(`https://telegram-bot-2-rffp.onrender.com/api/admin/ban/${userId}`, {
         method: 'POST'
       });
       fetchUsers();
@@ -74,7 +74,7 @@ const Admin = () => {
 
   const sendAnnouncement = async () => {
     try {
-      await fetch('http://localhost:3001/api/admin/announcement', {
+      await fetch('https://telegram-bot-2-rffp.onrender.com/api/admin/announcement', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: announcement })

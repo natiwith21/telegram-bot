@@ -11,7 +11,7 @@ const WalletBalance = ({ telegramId }) => {
       if (!telegramId) return;
       
       try {
-        const response = await fetch(`http://localhost:3001/api/user/${telegramId}`);
+        const response = await fetch(`https://telegram-bot-2-rffp.onrender.com/api/user/${telegramId}`);
         if (!response.ok) throw new Error('User not found');
         
         const data = await response.json();
