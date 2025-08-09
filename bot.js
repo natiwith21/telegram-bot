@@ -2813,10 +2813,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🌐 HTTP server running on port ${PORT} for Render deployment`);
-});
-
 // Start the bot - use webhooks in production, polling in development
 if (process.env.NODE_ENV === 'production') {
   // Use webhooks for production (Render)
@@ -2840,3 +2836,7 @@ if (process.env.NODE_ENV === 'production') {
     console.error('❌ Failed to launch bot:', error);
   });
 }
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌐 HTTP server running on port ${PORT} for Render deployment`);
+});
