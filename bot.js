@@ -2816,7 +2816,7 @@ app.get('/health', (req, res) => {
 // Start the bot - use webhooks in production, polling in development
 if (process.env.NODE_ENV === 'production') {
   // Use webhooks for production (Render)
-  const WEBHOOK_URL = `https://telegram-bot-2-rffp.onrender.com/webhook/${process.env.BOT_TOKEN}`;
+  const WEBHOOK_URL = `https://telegram-bot-u2ni.onrender.com/webhook/${process.env.BOT_TOKEN}`;
   
   // Set webhook
   bot.telegram.setWebhook(WEBHOOK_URL).then(() => {
