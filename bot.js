@@ -2817,9 +2817,26 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 HTTP server running on port ${PORT} for Render deployment`);
 });
 
-// Start the bot
-bot.launch().then(() => {
-  console.log('🚀 Bot launched successfully');
-}).catch((error) => {
-  console.error('❌ Failed to launch bot:', error);
-});
+// Start the bot - use webhooks in production, polling in development
+if (process.env.NODE_ENV === 'production') {
+  // Use webhooks for production (Render)
+  const WEBHOOK_URL = `https://telegram-bot-2-rffp.onrender.com/webhook/${process.env.BOT_TOKEN}`;
+  
+  // Set webhook
+  bot.telegram.setWebhook(WEBHOOK_URL).then(() => {
+    console.log('🚀 Bot webhook set successfully');
+  }).catch((error) => {
+    console.error('❌ Failed to set webhook:', error);
+  });
+  
+  // Add webhook endpoint to Express app
+  app.use(bot.webhookCallback('/webhook/' + process.env.BOT_TOKEN));
+  
+} else {
+  // Use polling for development
+  bot.launch().then(() => {
+    console.log('🚀 Bot launched successfully (polling mode)');
+  }).catch((error) => {
+    console.error('❌ Failed to launch bot:', error);
+  });
+}
