@@ -184,12 +184,32 @@ const tosKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('❌ Cancel', 'tos_cancel')]
 ]);
 
+// Global error handler for bot
+bot.catch((err, ctx) => {
+  console.log('Bot error:', err);
+  
+  // Don't crash on common Telegram errors
+  if (err.code === 403) {
+    console.log(`User ${ctx.from?.id} has blocked the bot`);
+    return;
+  }
+  
+  if (err.code === 429) {
+    console.log('Rate limited by Telegram');
+    return;
+  }
+  
+  // Log other errors but don't crash
+  console.error('Unexpected bot error:', err);
+});
+
 // Start command with referral tracking
 bot.start(async (ctx) => {
-  const startPayload = ctx.message.text.split(' ')[1]; // Get referral ID if present
-  const newUserId = ctx.from.id.toString();
-  
-  let welcomeMessage = `
+  try {
+    const startPayload = ctx.message.text.split(' ')[1]; // Get referral ID if present
+    const newUserId = ctx.from.id.toString();
+    
+    let welcomeMessage = `
 🎮 **Welcome to Bingo Bot!**
 
 Get ready for an exciting gaming experience! Our bot offers:
@@ -199,17 +219,17 @@ Get ready for an exciting gaming experience! Our bot offers:
 🎁 **Bonuses & Rewards** - Daily surprises
 
 Ready to start your adventure? Click the button below!
-  `;
-  
-  // Handle referral if present
-  if (startPayload && startPayload !== newUserId) {
-    try {
-      // Check if referred user exists and if referrer exists
-      const referrer = await User.findOne({ telegramId: startPayload });
-      const newUser = await User.findOne({ telegramId: newUserId });
-      
-      if (referrer && !newUser) {
-        welcomeMessage = `
+    `;
+    
+    // Handle referral if present
+    if (startPayload && startPayload !== newUserId) {
+      try {
+        // Check if referred user exists and if referrer exists
+        const referrer = await User.findOne({ telegramId: startPayload });
+        const newUser = await User.findOne({ telegramId: newUserId });
+        
+        if (referrer && !newUser) {
+          welcomeMessage = `
 🎮 **Welcome to Bingo Bot!**
 
 🎉 You were invited by ${referrer.name}! 
@@ -225,20 +245,24 @@ Get ready for an exciting gaming experience! Our bot offers:
 🎁 **Bonuses & Rewards** - Daily surprises
 
 Ready to start your adventure? Click the button below!
-        `;
-        
-        // Store referral info temporarily (will be processed during registration)
-        ctx.session = ctx.session || {};
-        ctx.session.referredBy = startPayload;
+          `;
+          
+          // Store referral info temporarily (will be processed during registration)
+          ctx.session = ctx.session || {};
+          ctx.session.referredBy = startPayload;
+        }
+      } catch (error) {
+        console.log('Referral processing error:', error.message);
       }
-    } catch (error) {
-      console.log('Referral processing error:', error.message);
     }
+    
+    await ctx.replyWithMarkdown(welcomeMessage, Markup.inlineKeyboard([
+      [Markup.button.callback('🚀 Start Playing', 'main_menu')]
+    ]));
+  } catch (error) {
+    console.log('Start command error:', error.message);
+    // Don't crash, just log the error
   }
-  
-  await ctx.replyWithMarkdown(welcomeMessage, Markup.inlineKeyboard([
-    [Markup.button.callback('🚀 Start Playing', 'main_menu')]
-  ]));
 });
 
 // Main menu action
@@ -2791,4 +2815,11 @@ app.get('/health', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 HTTP server running on port ${PORT} for Render deployment`);
+});
+
+// Start the bot
+bot.launch().then(() => {
+  console.log('🚀 Bot launched successfully');
+}).catch((error) => {
+  console.error('❌ Failed to launch bot:', error);
 });
