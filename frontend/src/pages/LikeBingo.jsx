@@ -96,7 +96,8 @@ const LikeBingo = () => {
           handleGameWin();
           alert(`🎉 Congratulations! You won the Bingo game!`);
         } else {
-          // Handle loss - no additional balance changes needed (stake already deducted)
+          // Handle loss - record the loss in backend
+          handleGameLoss();
           alert(`🏆 ${lastMessage.winnerName || 'Another player'} won the Bingo game!`);
         }
         
@@ -111,8 +112,38 @@ const LikeBingo = () => {
     }
   }, [lastMessage]);
 
+  // Update backend balance and sync with frontend
+  const updateBackendBalance = async (amount, reason) => {
+    if (gameMode === 'demo' || !telegramId) return;
+    
+    try {
+      const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/like-bingo-play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegramId,
+          selectedNumbers: [1], // Dummy for balance update
+          stake: Math.abs(amount),
+          token,
+          gameMode,
+          balanceUpdate: true,
+          reason,
+          isWin: amount > 0
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        // Update frontend balance with real backend balance
+        setUserBalance(data.newBalance);
+      }
+    } catch (error) {
+      console.error('Failed to update backend balance:', error);
+    }
+  };
+
   // Handle game win - calculate winnings based on game mode
-  const handleGameWin = () => {
+  const handleGameWin = async () => {
     if (gameMode === 'demo') return; // No balance changes for demo
     
     const winMultipliers = {
@@ -125,8 +156,16 @@ const LikeBingo = () => {
     const multiplier = winMultipliers[gameMode] || 2;
     const winnings = stake * multiplier;
     
-    // Update balance with winnings
-    setUserBalance(prev => prev + winnings);
+    // Update backend with winnings and sync balance
+    await updateBackendBalance(winnings, 'game_win');
+  };
+
+  // Handle game loss - sync balance with backend
+  const handleGameLoss = async () => {
+    if (gameMode === 'demo') return; // No balance changes for demo
+    
+    // Just sync the balance with backend to ensure accuracy
+    await loadUserData();
   };
 
   const loadUserData = async () => {
@@ -246,8 +285,11 @@ const LikeBingo = () => {
           gameMode
         });
         
-        // Go directly to playing state, skip countdown
-        setUserBalance(prev => prev - stake);
+        // For paid games, deduct stake and update backend
+        if (gameMode !== 'demo') {
+          await updateBackendBalance(-stake, 'game_start');
+          setUserBalance(prev => prev - stake);
+        }
         setGameNumber(prev => prev + 1);
         setGameState('playing');
         startDrawing();

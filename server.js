@@ -304,11 +304,67 @@ app.get('/api/user/:telegramId', async (req, res) => {
 
 app.post('/api/like-bingo-play', async (req, res) => {
   try {
-    const { telegramId, selectedNumbers, stake, token } = req.body;
+    const { telegramId, selectedNumbers, stake, token, gameMode, balanceUpdate, reason, isWin } = req.body;
     
-    // Validate input
+    // Handle balance update requests (for wins/losses)
+    if (balanceUpdate) {
+      const user = await User.findOne({ telegramId });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (isWin) {
+        // Add winnings based on game mode
+        const winMultipliers = {
+          '10': 2.5,   // 10 coins -> 25 coins (2.5x)
+          '20': 3,     // 20 coins -> 60 coins (3x)  
+          '50': 3.5,   // 50 coins -> 175 coins (3.5x)
+          '100': 4     // 100 coins -> 400 coins (4x)
+        };
+        
+        const multiplier = winMultipliers[gameMode] || 2;
+        const winnings = stake * multiplier;
+        user.balance += winnings;
+        
+        // Add to game history
+        const gameResult = `Bingo ${gameMode}: WIN +${winnings} coins`;
+        user.gameHistory = user.gameHistory || [];
+        user.gameHistory.push(gameResult);
+      } else {
+        // Handle loss - stake already deducted, just log it
+        const gameResult = `Bingo ${gameMode}: LOSS -${stake} coins`;
+        user.gameHistory = user.gameHistory || [];
+        user.gameHistory.push(gameResult);
+      }
+      
+      // Keep only last 20 game records
+      if (user.gameHistory.length > 20) {
+        user.gameHistory = user.gameHistory.slice(-20);
+      }
+      
+      await user.save();
+      
+      return res.json({
+        success: true,
+        newBalance: user.balance
+      });
+    }
+    
+    // Validate input for regular game play
     if (!telegramId || !selectedNumbers || !stake) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Skip validation for demo mode
+    if (gameMode === 'demo') {
+      return res.json({
+        success: true,
+        newBalance: 1000, // Demo balance
+        winningNumbers: Array.from({length: 20}, () => Math.floor(Math.random() * 100) + 1),
+        matches: [],
+        winAmount: 0,
+        gameResult: 'Demo game'
+      });
     }
     
     if (!Array.isArray(selectedNumbers) || selectedNumbers.length === 0) {
