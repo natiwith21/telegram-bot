@@ -2795,8 +2795,13 @@ bot.on('text', async (ctx, next) => {
 
 // Add HTTP server for Render deployment
 const express = require('express');
+const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
 
 app.get('/', (req, res) => {
   res.json({ 
@@ -2811,6 +2816,184 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
   });
+});
+
+// API Routes for frontend
+app.get('/api/user/:telegramId', async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    console.log(`📱 API: Fetching user data for telegramId: ${telegramId}`);
+    
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      console.log(`❌ API: User not found for telegramId: ${telegramId}`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log(`✅ API: Found user ${user.name} with balance: ${user.balance}`);
+    res.json({
+      success: true,
+      user: {
+        telegramId: user.telegramId,
+        name: user.name,
+        balance: user.balance || 0,
+        bonus: user.bonus || 0,
+        gameHistory: user.gameHistory || []
+      }
+    });
+  } catch (error) {
+    console.error('❌ API: Error fetching user:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/like-bingo-play', async (req, res) => {
+  try {
+    const { telegramId, selectedNumbers, stake, token, gameMode, balanceUpdate, reason, isWin } = req.body;
+    console.log(`🎮 API: Like Bingo play request - telegramId: ${telegramId}, gameMode: ${gameMode}, stake: ${stake}`);
+    
+    // Handle balance update requests (for wins/losses)
+    if (balanceUpdate) {
+      const user = await User.findOne({ telegramId });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (isWin) {
+        // Add winnings based on game mode
+        const winMultipliers = {
+          '10': 2.5,   // 10 coins -> 25 coins (2.5x)
+          '20': 3,     // 20 coins -> 60 coins (3x)  
+          '50': 3.5,   // 50 coins -> 175 coins (3.5x)
+          '100': 4     // 100 coins -> 400 coins (4x)
+        };
+        
+        const multiplier = winMultipliers[gameMode] || 2;
+        const winnings = stake * multiplier;
+        user.balance += winnings;
+        
+        // Add to game history
+        const gameResult = `Bingo ${gameMode}: WIN +${winnings} coins`;
+        user.gameHistory = user.gameHistory || [];
+        user.gameHistory.push(gameResult);
+        
+        console.log(`🏆 API: User won ${winnings} coins, new balance: ${user.balance}`);
+      } else {
+        // Handle loss - deduct stake if not already deducted
+        if (reason === 'game_loss') {
+          user.balance -= stake;
+        }
+        const gameResult = `Bingo ${gameMode}: LOSS -${stake} coins`;
+        user.gameHistory = user.gameHistory || [];
+        user.gameHistory.push(gameResult);
+        
+        console.log(`😢 API: User lost ${stake} coins, new balance: ${user.balance}`);
+      }
+      
+      // Keep only last 20 game records
+      if (user.gameHistory.length > 20) {
+        user.gameHistory = user.gameHistory.slice(-20);
+      }
+      
+      await user.save();
+      
+      return res.json({
+        success: true,
+        newBalance: user.balance
+      });
+    }
+    
+    // Skip validation for demo mode
+    if (gameMode === 'demo') {
+      return res.json({
+        success: true,
+        newBalance: 1000, // Demo balance
+        winningNumbers: Array.from({length: 20}, () => Math.floor(Math.random() * 100) + 1),
+        matches: [],
+        winAmount: 0,
+        gameResult: 'Demo game'
+      });
+    }
+    
+    // Validate input for regular game play
+    if (!telegramId || !selectedNumbers || !stake) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    if (!Array.isArray(selectedNumbers) || selectedNumbers.length === 0) {
+      return res.status(400).json({ error: 'Must select at least one number' });
+    }
+    
+    if (selectedNumbers.length > 10) {
+      return res.status(400).json({ error: 'Cannot select more than 10 numbers' });
+    }
+    
+    // Find user
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Check balance
+    if (user.balance < stake) {
+      return res.status(400).json({ error: 'Insufficient balance' });
+    }
+    
+    // Deduct stake from balance
+    user.balance -= stake;
+    console.log(`💰 API: Deducted ${stake} coins, new balance: ${user.balance}`);
+    
+    // Generate winning numbers (20 random numbers from 1-100)
+    const winningNumbers = [];
+    while (winningNumbers.length < 20) {
+      const num = Math.floor(Math.random() * 100) + 1;
+      if (!winningNumbers.includes(num)) {
+        winningNumbers.push(num);
+      }
+    }
+    
+    // Calculate matches
+    const matches = selectedNumbers.filter(num => winningNumbers.includes(num));
+    
+    // Calculate winnings based on matches
+    const multipliers = {
+      0: 0, 1: 0, 2: 0, 3: 1.2, 4: 1.5, 5: 2, 
+      6: 3, 7: 5, 8: 8, 9: 12, 10: 20
+    };
+    
+    const winMultiplier = multipliers[matches.length] || 0;
+    const winAmount = Math.floor(stake * winMultiplier);
+    
+    // Add winnings to balance
+    if (winAmount > 0) {
+      user.balance += winAmount;
+    }
+    
+    // Add to game history
+    const gameResult = `Like Bingo: ${matches.length}/10 matches, ${winAmount > 0 ? `+${winAmount}` : '0'} coins`;
+    user.gameHistory = user.gameHistory || [];
+    user.gameHistory.push(gameResult);
+    
+    // Keep only last 20 game records
+    if (user.gameHistory.length > 20) {
+      user.gameHistory = user.gameHistory.slice(-20);
+    }
+    
+    await user.save();
+    
+    res.json({
+      success: true,
+      newBalance: user.balance,
+      winningNumbers,
+      matches,
+      winAmount,
+      gameResult
+    });
+    
+  } catch (error) {
+    console.error('❌ API: Like Bingo play error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // Start the bot - use webhooks in production, polling in development

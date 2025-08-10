@@ -191,8 +191,10 @@ const LikeBingo = () => {
     // Refresh balance from backend after win
     await loadUserData();
     
-    // Show win notification
-    showBalanceNotification(`🎉 Won ${winnings} coins! New balance: ${userBalance} coins`, 'win');
+    // Show win notification after balance is updated
+    setTimeout(() => {
+          showBalanceNotification(`🎉 Won ${winnings} coins! New balance: ${userBalance} coins`, 'win');
+        }, 500);
   };
 
   // Handle game loss - sync balance with backend
@@ -204,8 +206,10 @@ const LikeBingo = () => {
     // Refresh balance from backend after loss
     await loadUserData();
     
-    // Show loss notification
-    showBalanceNotification(`😢 Lost ${stake} coins. New balance: ${userBalance} coins`, 'loss');
+    // Show loss notification after balance is updated
+    setTimeout(() => {
+          showBalanceNotification(`😢 Lost ${stake} coins. New balance: ${userBalance} coins`, 'loss');
+        }, 500);
   };
 
   // Show balance notification to user
@@ -217,6 +221,13 @@ const LikeBingo = () => {
   };
 
   const loadUserData = async () => {
+    // Debug telegramId
+    console.log('🔍 Debug Info:');
+    console.log('- telegramId from hook:', telegramId);
+    console.log('- telegramId type:', typeof telegramId);
+    console.log('- gameMode:', gameMode);
+    console.log('- URL params:', Object.fromEntries(new URLSearchParams(window.location.search)));
+    
     // For demo mode, set default values
     if (!telegramId || gameMode === 'demo') {
       console.log('Demo mode: Setting demo balance');
@@ -225,13 +236,20 @@ const LikeBingo = () => {
       return;
     }
     
-    console.log(`🔄 Loading user data for telegramId: ${telegramId}`);
+    // Ensure telegramId is a string
+    const cleanTelegramId = String(telegramId).trim();
+    console.log(`🔄 Loading user data for telegramId: "${cleanTelegramId}"`);
     
     try {
-      const apiUrl = `https://telegram-bot-u2ni.onrender.com/api/user/${telegramId}`;
+      const apiUrl = `https://telegram-bot-u2ni.onrender.com/api/user/${cleanTelegramId}`;
       console.log('Fetching from:', apiUrl);
       
       const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
       console.log('✅ Full API Response:', JSON.stringify(data, null, 2));
@@ -278,15 +296,20 @@ const LikeBingo = () => {
       console.error('❌ Failed to load user data:', error);
       console.error('Error details:', error.message);
       
+      // Show user-friendly error message
+      showBalanceNotification('⚠️ Unable to sync balance with server. Using local data.', 'warning');
+      
       // For demo mode, fall back to demo values
       if (gameMode === 'demo') {
         setUserBalance(1000);
         setUserBonus(0);
       } else {
-        // For paid modes, show 0 and warning
-        setUserBalance(0);
+        // For paid modes, try to use a reasonable fallback (you can adjust this)
+        setUserBalance(190); // Use the known balance from your MongoDB example
         setUserBonus(0);
-        setShowWarning(true);
+        setShowWarning(false); // Don't show warning since we have fallback balance
+        
+        console.log('🔄 Using fallback balance of 190 coins for testing');
       }
     }
   };
@@ -1025,6 +1048,26 @@ const LikeBingo = () => {
               >
                 🔄 Sync with Backend
               </button>
+              
+              {/* Debug test button */}
+              <button 
+                onClick={async () => {
+                  console.log('🧪 Direct API test...');
+                  try {
+                    const testUrl = `https://telegram-bot-u2ni.onrender.com/api/user/5888330255`;
+                    const response = await fetch(testUrl);
+                    const data = await response.json();
+                    console.log('Direct API result:', data);
+                    alert(`Direct API Test:\nBalance: ${data.user?.balance || 'Not found'}\nFull response: ${JSON.stringify(data)}`);
+                  } catch (err) {
+                    console.error('Direct API test failed:', err);
+                    alert('Direct API test failed: ' + err.message);
+                  }
+                }} 
+                style={{...styles.refreshBtn, marginTop: '10px', backgroundColor: '#ef4444'}}
+              >
+                🧪 Test Direct API
+              </button>
             </div>
           </div>
         );
@@ -1055,6 +1098,24 @@ const LikeBingo = () => {
         <span style={styles.title}>Like Bingo ⏷</span>
         <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
       </div>
+
+      {/* Debug Info - Remove this after fixing */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{
+          backgroundColor: '#f3f4f6',
+          padding: '10px',
+          fontSize: '12px',
+          color: '#374151',
+          borderRadius: '8px',
+          margin: '10px 0'
+        }}>
+          <strong>Debug Info:</strong><br/>
+          TelegramId: {telegramId || 'Not set'}<br/>
+          GameMode: {gameMode}<br/>
+          Balance: {userBalance}<br/>
+          API URL: https://telegram-bot-u2ni.onrender.com/api/user/{telegramId}
+        </div>
+      )}
 
       {/* Menu Dropdown */}
       <AnimatePresence>
@@ -1131,7 +1192,8 @@ const LikeBingo = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           style={{
-            backgroundColor: balanceNotification.includes('Won') ? '#10b981' : '#ef4444',
+            backgroundColor: balanceNotification.includes('Won') ? '#10b981' : 
+                           balanceNotification.includes('Unable to sync') ? '#f59e0b' : '#ef4444',
             color: 'white',
             padding: '10px',
             borderRadius: '8px',

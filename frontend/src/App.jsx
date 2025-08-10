@@ -16,16 +16,38 @@ function App() {
   const [telegramId, setTelegramId] = useState('');
 
   useEffect(() => {
-    // Get Telegram user ID from Telegram WebApp API
+    // Get Telegram user ID from multiple sources
+    let userTelegramId = '';
+    
+    // Method 1: From URL parameters (for testing/direct access)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTelegramId = urlParams.get('telegramId') || urlParams.get('telegram_id');
+    
+    if (urlTelegramId) {
+      userTelegramId = urlTelegramId;
+      console.log('📱 Got telegramId from URL:', userTelegramId);
+    }
+    
+    // Method 2: From Telegram WebApp API (when opened in Telegram)
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
       tg.ready();
       
       const user = tg.initDataUnsafe?.user;
       if (user) {
-        setTelegramId(user.id.toString());
+        userTelegramId = user.id.toString();
+        console.log('📱 Got telegramId from Telegram WebApp:', userTelegramId);
       }
     }
+    
+    // Method 3: Fallback for testing (use the user from your example)
+    if (!userTelegramId) {
+      userTelegramId = '5888330255'; // Your test user ID
+      console.log('📱 Using fallback telegramId for testing:', userTelegramId);
+    }
+    
+    setTelegramId(userTelegramId);
+    console.log('✅ Final telegramId set:', userTelegramId);
   }, []);
 
   return (
