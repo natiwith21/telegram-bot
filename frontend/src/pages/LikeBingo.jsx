@@ -9,6 +9,7 @@ const LikeBingo = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
+  const gameMode = searchParams.get('mode') || '10'; // Get game mode from URL (10, 20, 50, 100, demo)
   
   // Game State
   const [userBalance, setUserBalance] = useState(0);
@@ -91,8 +92,11 @@ const LikeBingo = () => {
         setGameState('finished');
         
         if (lastMessage.winner === telegramId) {
+          // Handle win - update balance based on game mode
+          handleGameWin();
           alert(`🎉 Congratulations! You won the Bingo game!`);
         } else {
+          // Handle loss - no additional balance changes needed (stake already deducted)
           alert(`🏆 ${lastMessage.winnerName || 'Another player'} won the Bingo game!`);
         }
         
@@ -107,11 +111,29 @@ const LikeBingo = () => {
     }
   }, [lastMessage]);
 
+  // Handle game win - calculate winnings based on game mode
+  const handleGameWin = () => {
+    if (gameMode === 'demo') return; // No balance changes for demo
+    
+    const winMultipliers = {
+      '10': 2.5,   // 10 coins -> 25 coins (2.5x)
+      '20': 3,     // 20 coins -> 60 coins (3x)
+      '50': 3.5,   // 50 coins -> 175 coins (3.5x)
+      '100': 4     // 100 coins -> 400 coins (4x)
+    };
+    
+    const multiplier = winMultipliers[gameMode] || 2;
+    const winnings = stake * multiplier;
+    
+    // Update balance with winnings
+    setUserBalance(prev => prev + winnings);
+  };
+
   const loadUserData = async () => {
     // For demo mode, set default values
-    if (!telegramId) {
+    if (!telegramId || gameMode === 'demo') {
       setUserBalance(1000);
-      setUserBonus(50);
+      setUserBonus(0);
       return;
     }
     
@@ -120,18 +142,27 @@ const LikeBingo = () => {
       const data = await response.json();
       
       if (data.success) {
-        setUserBalance(data.user.balance || 1000);
-        setUserBonus(data.user.bonus || 50);
+        setUserBalance(data.user.balance || 0);
+        setUserBonus(data.user.bonus || 0);
         
-        if (data.user.balance < stake) {
+        // Set stake based on game mode
+        const stakeCost = parseInt(gameMode);
+        setStake(stakeCost);
+        
+        if (data.user.balance < stakeCost) {
           setShowWarning(true);
         }
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
       // Set demo values on error
-      setUserBalance(1000);
-      setUserBonus(50);
+      if (gameMode === 'demo') {
+        setUserBalance(1000);
+        setUserBonus(0);
+      } else {
+        setUserBalance(0);
+        setUserBonus(0);
+      }
     }
   };
 
@@ -168,6 +199,14 @@ const LikeBingo = () => {
   };
 
   const startGame = async () => {
+    // For demo mode, skip balance checks
+    if (gameMode === 'demo') {
+      setGameNumber(prev => prev + 1);
+      setGameState('playing');
+      startDrawing();
+      return;
+    }
+    
     if (userBalance < stake) {
       setShowWarning(true);
       return;
@@ -203,7 +242,8 @@ const LikeBingo = () => {
           telegramId,
           selectedNumbers,
           stake,
-          token
+          token,
+          gameMode
         });
         
         // Go directly to playing state, skip countdown
@@ -223,7 +263,8 @@ const LikeBingo = () => {
           telegramId,
           selectedNumbers,
           stake,
-          token
+          token,
+          gameMode
         })
       });
 
