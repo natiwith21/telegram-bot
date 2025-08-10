@@ -435,13 +435,11 @@ bot.action('likebingo_start', async (ctx) => {
     return;
   }
   
-  // Deduct stake
-  user.balance -= 10;
-  await user.save();
+  // Don't deduct stake upfront - it will be deducted when the game ends
   
   await ctx.answerCbQuery('�� Game started! Good luck!', { show_alert: true });
   
-  // Refresh interface with new balance
+  // Refresh interface with current balance (unchanged)
   const interface = await createLikeBingoInterface(ctx, user.balance, user.bonus, false);
   await ctx.editMessageText(interface.text, {
     parse_mode: 'Markdown', 
@@ -582,9 +580,8 @@ paidBingoModes.forEach(mode => {
         return;
       }
       
-      // User has sufficient balance - deduct cost and start game
-      user.balance -= config.cost;
-      await user.save();
+      // User has sufficient balance - create game session WITHOUT deducting cost yet
+      // Cost will be deducted only when the game ends (win/loss)
       
       // Create game session
       const sessionToken = generateSessionToken();
@@ -600,9 +597,9 @@ paidBingoModes.forEach(mode => {
       
       await ctx.editMessageText(
         `🎮 Bingo ${gameMode} - Ready to Play!\n\n` +
-        `💰 Entry Cost: ${config.cost} coins (deducted)\n` +
+        `💰 Entry Cost: ${config.cost} coins (will be deducted on game end)\n` +
         `🏆 Potential Winnings: ${config.winnings} coins\n` +
-        `💼 Remaining Balance: ${user.balance} coins\n\n` +
+        `💼 Current Balance: ${user.balance} coins\n\n` +
         `🎯 Good luck! Choose how to play:`,
         {
           reply_markup: Markup.inlineKeyboard([
