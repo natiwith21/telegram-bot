@@ -2849,10 +2849,66 @@ app.get('/api/user/:telegramId', async (req, res) => {
 
 app.post('/api/like-bingo-play', async (req, res) => {
   try {
-    const { telegramId, selectedNumbers, stake, token, gameMode, balanceUpdate, reason, isWin } = req.body;
-    console.log(`🎮 API: Like Bingo play request - telegramId: ${telegramId}, gameMode: ${gameMode}, stake: ${stake}`);
+    const { telegramId, selectedNumbers, stake, token, gameMode, balanceUpdate, gameResult: isGameResult, reason, isWin } = req.body;
+    console.log(`🎮 API: Like Bingo request - telegramId: ${telegramId}, gameMode: ${gameMode}, stake: ${stake}, gameResult: ${isGameResult}, isWin: ${isWin}`);
     
-    // Handle balance update requests (for wins/losses)
+    // Handle game result processing (new correct way)
+    if (isGameResult) {
+      const user = await User.findOne({ telegramId });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      let winAmount = 0;
+      
+      if (isWin) {
+        // Calculate winnings
+        const winMultipliers = {
+          '10': 2.5,   // 10 coins -> 25 coins (2.5x)
+          '20': 3,     // 20 coins -> 60 coins (3x)  
+          '50': 3.5,   // 50 coins -> 175 coins (3.5x)
+          '100': 4     // 100 coins -> 400 coins (4x)
+        };
+        
+        const multiplier = winMultipliers[gameMode] || 2;
+        winAmount = stake * multiplier;
+        
+        // For win: Deduct stake, add winnings (net = winnings - stake)
+        user.balance = user.balance - stake + winAmount;
+        
+        const gameRecord = `Bingo ${gameMode}: WIN - Paid ${stake}, Won ${winAmount}, Net: +${winAmount - stake}`;
+        user.gameHistory = user.gameHistory || [];
+        user.gameHistory.push(gameRecord);
+        
+        console.log(`🏆 API: WIN - Deducted ${stake}, Won ${winAmount}, Net: +${winAmount - stake}, New balance: ${user.balance}`);
+      } else {
+        // For loss: Just deduct stake
+        user.balance -= stake;
+        winAmount = 0;
+        
+        const gameRecord = `Bingo ${gameMode}: LOSS - Lost ${stake} coins`;
+        user.gameHistory = user.gameHistory || [];
+        user.gameHistory.push(gameRecord);
+        
+        console.log(`😢 API: LOSS - Deducted ${stake}, New balance: ${user.balance}`);
+      }
+      
+      // Keep only last 20 game records
+      if (user.gameHistory.length > 20) {
+        user.gameHistory = user.gameHistory.slice(-20);
+      }
+      
+      await user.save();
+      
+      return res.json({
+        success: true,
+        newBalance: user.balance,
+        winAmount: winAmount,
+        netGain: isWin ? winAmount - stake : -stake
+      });
+    }
+    
+    // Handle old balance update requests (deprecated)
     if (balanceUpdate) {
       const user = await User.findOne({ telegramId });
       if (!user) {
@@ -2934,14 +2990,12 @@ app.post('/api/like-bingo-play', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Check balance
+    // Check balance but DON'T deduct yet (deduction happens on game result)
     if (user.balance < stake) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
     
-    // Deduct stake from balance
-    user.balance -= stake;
-    console.log(`💰 API: Deducted ${stake} coins, new balance: ${user.balance}`);
+    console.log(`💰 API: Balance check passed (${user.balance} >= ${stake}), starting game without deduction`);
     
     // Generate winning numbers (20 random numbers from 1-100)
     const winningNumbers = [];
@@ -2970,9 +3024,9 @@ app.post('/api/like-bingo-play', async (req, res) => {
     }
     
     // Add to game history
-    const gameResult = `Like Bingo: ${matches.length}/10 matches, ${winAmount > 0 ? `+${winAmount}` : '0'} coins`;
+    const gameRecord = `Like Bingo: ${matches.length}/10 matches, ${winAmount > 0 ? `+${winAmount}` : '0'} coins`;
     user.gameHistory = user.gameHistory || [];
-    user.gameHistory.push(gameResult);
+    user.gameHistory.push(gameRecord);
     
     // Keep only last 20 game records
     if (user.gameHistory.length > 20) {
@@ -2987,7 +3041,7 @@ app.post('/api/like-bingo-play', async (req, res) => {
       winningNumbers,
       matches,
       winAmount,
-      gameResult
+      gameRecord
     });
     
   } catch (error) {

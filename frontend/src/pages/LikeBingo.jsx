@@ -139,9 +139,11 @@ const LikeBingo = () => {
     handleMessage();
   }, [lastMessage]);
 
-  // Update backend balance and sync with frontend
-  const updateBackendBalance = async (amount, reason) => {
+  // Process game result and update balance accordingly
+  const processGameResult = async (isWin) => {
     if (gameMode === 'demo' || !telegramId) return;
+    
+    console.log(`🎯 Processing game result: ${isWin ? 'WIN' : 'LOSS'} for stake ${stake}`);
     
     try {
       const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/like-bingo-play`, {
@@ -149,13 +151,13 @@ const LikeBingo = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           telegramId,
-          selectedNumbers: [1], // Dummy for balance update
-          stake: Math.abs(amount),
+          selectedNumbers: [1], // Dummy for game result processing
+          stake,
           token,
           gameMode,
-          balanceUpdate: true,
-          reason,
-          isWin: amount > 0
+          gameResult: true, // Flag to indicate this is processing final game result
+          isWin,
+          reason: isWin ? 'game_win' : 'game_loss'
         })
       });
       
@@ -163,53 +165,60 @@ const LikeBingo = () => {
       if (data.success) {
         // Update frontend balance with real backend balance
         setUserBalance(data.newBalance);
-        console.log(`Balance updated: ${reason}, new balance: ${data.newBalance}`);
+        
+        if (isWin) {
+          const winnings = data.winAmount || (stake * getWinMultiplier());
+          console.log(`🏆 WIN: Deducted ${stake}, won ${winnings}, net: +${winnings - stake}, balance: ${data.newBalance}`);
+          showBalanceNotification(`🎉 Won ${winnings} coins! Net gain: +${winnings - stake}`, 'win');
+        } else {
+          console.log(`😢 LOSS: Deducted ${stake} coins, balance: ${data.newBalance}`);
+          showBalanceNotification(`😢 Lost ${stake} coins. New balance: ${data.newBalance}`, 'loss');
+        }
       } else {
-        console.error('Backend balance update failed:', data.error);
+        console.error('Backend game result processing failed:', data.error);
       }
     } catch (error) {
-      console.error('Failed to update backend balance:', error);
+      console.error('Failed to process game result:', error);
     }
   };
 
-  // Handle game win - calculate winnings based on game mode
-  const handleGameWin = async () => {
-    if (gameMode === 'demo') return; // No balance changes for demo
-    
+  // Get win multiplier for current game mode
+  const getWinMultiplier = () => {
     const winMultipliers = {
       '10': 2.5,   // 10 coins -> 25 coins (2.5x)
       '20': 3,     // 20 coins -> 60 coins (3x)
       '50': 3.5,   // 50 coins -> 175 coins (3.5x)
       '100': 4     // 100 coins -> 400 coins (4x)
     };
-    
-    const multiplier = winMultipliers[gameMode] || 2;
-    const winnings = stake * multiplier;
-    
-    // Update backend with winnings and sync balance
-    await updateBackendBalance(winnings, 'game_win');
-    // Refresh balance from backend after win
-    await loadUserData();
-    
-    // Show win notification after balance is updated
-    setTimeout(() => {
-          showBalanceNotification(`🎉 Won ${winnings} coins! New balance: ${userBalance} coins`, 'win');
-        }, 500);
+    return winMultipliers[gameMode] || 2;
   };
 
-  // Handle game loss - sync balance with backend
+  // Handle game win - process win result
+  const handleGameWin = async () => {
+    if (gameMode === 'demo') {
+      alert('🎉 Demo win! No real coins affected.');
+      return;
+    }
+    
+    console.log('🏆 Handling game win...');
+    await processGameResult(true);
+    
+    // Refresh balance to ensure UI is in sync
+    setTimeout(() => loadUserData(), 1000);
+  };
+
+  // Handle game loss - process loss result
   const handleGameLoss = async () => {
-    if (gameMode === 'demo') return; // No balance changes for demo
+    if (gameMode === 'demo') {
+      alert('😢 Demo loss! No real coins affected.');
+      return;
+    }
     
-    // Update backend to record the loss and sync balance
-    await updateBackendBalance(-stake, 'game_loss');
-    // Refresh balance from backend after loss
-    await loadUserData();
+    console.log('😢 Handling game loss...');
+    await processGameResult(false);
     
-    // Show loss notification after balance is updated
-    setTimeout(() => {
-          showBalanceNotification(`😢 Lost ${stake} coins. New balance: ${userBalance} coins`, 'loss');
-        }, 500);
+    // Refresh balance to ensure UI is in sync
+    setTimeout(() => loadUserData(), 1000);
   };
 
   // Show balance notification to user
@@ -394,15 +403,10 @@ const LikeBingo = () => {
           gameMode
         });
         
-        // For paid games, just track game start - backend handles balance deduction
+        // For paid games, don't deduct balance yet - wait for game result
         if (gameMode !== 'demo') {
-          // Don't deduct locally, backend will handle it
-          console.log('Starting paid game, backend will deduct stake');
-          // Refresh balance after a short delay to show updated amount
-          setTimeout(() => {
-            loadUserData();
-            showBalanceNotification(`🎮 Game started! Stake: ${stake} coins`, 'info');
-          }, 1000);
+          console.log('🎮 Starting paid game - balance will be updated on game end only');
+          showBalanceNotification(`🎮 Game started! Stake: ${stake} coins at risk`, 'info');
         }
         setGameNumber(prev => prev + 1);
         setGameState('playing');
@@ -412,40 +416,34 @@ const LikeBingo = () => {
       }
 
       // Fallback to local game if WebSocket not connected
-      const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/like-bingo-play`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegramId,
-          selectedNumbers,
-          stake,
-          token,
-          gameMode
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // Update balance with real backend balance
-        setUserBalance(data.newBalance);
-        setGameNumber(prev => prev + 1);
-        // Go directly to playing state, skip countdown
-        setGameState('playing');
-        startDrawing();
+      // For paid games, don't charge upfront - charge only on game end
+      if (gameMode !== 'demo') {
+        // Check if user has sufficient balance before starting
+        if (userBalance < stake) {
+          alert(`Insufficient balance! You have ${userBalance} coins but need ${stake} coins to play.`);
+          setIsLoading(false);
+          return;
+        }
         
-        // Also refresh user data to ensure sync
-        setTimeout(() => loadUserData(), 1000);
-      } else {
-        alert(data.error || 'Failed to start game');
+        console.log('💰 Starting paid game without upfront charge - will process result later');
+        showBalanceNotification(`🎮 Game started! ${stake} coins at risk`, 'info');
       }
-    } catch (error) {
-      console.error('Game start error:', error);
-      // For demo, proceed anyway
-      setUserBalance(prev => prev - stake);
+      
       setGameNumber(prev => prev + 1);
+      // Go directly to playing state, skip countdown
       setGameState('playing');
       startDrawing();
+    } catch (error) {
+      console.error('Game start error:', error);
+      
+      if (gameMode === 'demo') {
+        // For demo, proceed anyway without balance changes
+        setGameNumber(prev => prev + 1);
+        setGameState('playing');
+        startDrawing();
+      } else {
+        alert('Failed to start game. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -599,9 +597,9 @@ const LikeBingo = () => {
     // Handle win through backend
     if (gameMode !== 'demo') {
       await handleGameWin();
+    } else {
+      alert('🎉 BINGO! Demo win - no real coins affected.');
     }
-    
-    alert(`🎉 BINGO! You won the game!`);
     
     // Reset game
     setTimeout(() => {
