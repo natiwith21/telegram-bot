@@ -2859,6 +2859,14 @@ app.post('/api/like-bingo-play', async (req, res) => {
         return res.status(404).json({ error: 'User not found' });
       }
       
+      const originalBalance = user.balance;
+      console.log(`🎯 PROCESSING GAME RESULT:`);
+      console.log(`   User: ${telegramId}`);
+      console.log(`   Game Mode: ${gameMode}`);
+      console.log(`   Stake: ${stake}`);
+      console.log(`   Result: ${isWin ? 'WIN' : 'LOSS'}`);
+      console.log(`   Original Balance: ${originalBalance}`);
+      
       let winAmount = 0;
       
       if (isWin) {
@@ -2880,7 +2888,11 @@ app.post('/api/like-bingo-play', async (req, res) => {
         user.gameHistory = user.gameHistory || [];
         user.gameHistory.push(gameRecord);
         
-        console.log(`🏆 API: WIN - Deducted ${stake}, Won ${winAmount}, Net: +${winAmount - stake}, New balance: ${user.balance}`);
+        console.log(`🏆 WIN CALCULATION:`);
+        console.log(`   Multiplier: ${multiplier}x`);
+        console.log(`   Winnings: ${winAmount}`);
+        console.log(`   Calculation: ${originalBalance} - ${stake} + ${winAmount} = ${user.balance}`);
+        console.log(`   Net Gain: +${winAmount - stake}`);
       } else {
         // For loss: Just deduct stake
         user.balance -= stake;
@@ -2890,7 +2902,9 @@ app.post('/api/like-bingo-play', async (req, res) => {
         user.gameHistory = user.gameHistory || [];
         user.gameHistory.push(gameRecord);
         
-        console.log(`😢 API: LOSS - Deducted ${stake}, New balance: ${user.balance}`);
+        console.log(`😢 LOSS CALCULATION:`);
+        console.log(`   Calculation: ${originalBalance} - ${stake} = ${user.balance}`);
+        console.log(`   Net Loss: -${stake}`);
       }
       
       // Keep only last 20 game records
@@ -2908,54 +2922,11 @@ app.post('/api/like-bingo-play', async (req, res) => {
       });
     }
     
-    // Handle old balance update requests (deprecated)
+    // Handle old balance update requests (DEPRECATED - DISABLED)
     if (balanceUpdate) {
-      const user = await User.findOne({ telegramId });
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      if (isWin) {
-        // Add winnings based on game mode
-        const winMultipliers = {
-          '10': 2.5,   // 10 coins -> 25 coins (2.5x)
-          '20': 3,     // 20 coins -> 60 coins (3x)  
-          '50': 3.5,   // 50 coins -> 175 coins (3.5x)
-          '100': 4     // 100 coins -> 400 coins (4x)
-        };
-        
-        const multiplier = winMultipliers[gameMode] || 2;
-        const winnings = stake * multiplier;
-        user.balance += winnings;
-        
-        // Add to game history
-        const gameResult = `Bingo ${gameMode}: WIN +${winnings} coins`;
-        user.gameHistory = user.gameHistory || [];
-        user.gameHistory.push(gameResult);
-        
-        console.log(`🏆 API: User won ${winnings} coins, new balance: ${user.balance}`);
-      } else {
-        // Handle loss - deduct stake if not already deducted
-        if (reason === 'game_loss') {
-          user.balance -= stake;
-        }
-        const gameResult = `Bingo ${gameMode}: LOSS -${stake} coins`;
-        user.gameHistory = user.gameHistory || [];
-        user.gameHistory.push(gameResult);
-        
-        console.log(`😢 API: User lost ${stake} coins, new balance: ${user.balance}`);
-      }
-      
-      // Keep only last 20 game records
-      if (user.gameHistory.length > 20) {
-        user.gameHistory = user.gameHistory.slice(-20);
-      }
-      
-      await user.save();
-      
-      return res.json({
-        success: true,
-        newBalance: user.balance
+      return res.status(400).json({ 
+        error: 'balanceUpdate method is deprecated. Use gameResult flag instead.',
+        hint: 'Please update frontend to use gameResult: true instead of balanceUpdate: true'
       });
     }
     
@@ -2971,77 +2942,10 @@ app.post('/api/like-bingo-play', async (req, res) => {
       });
     }
     
-    // Validate input for regular game play
-    if (!telegramId || !selectedNumbers || !stake) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    if (!Array.isArray(selectedNumbers) || selectedNumbers.length === 0) {
-      return res.status(400).json({ error: 'Must select at least one number' });
-    }
-    
-    if (selectedNumbers.length > 10) {
-      return res.status(400).json({ error: 'Cannot select more than 10 numbers' });
-    }
-    
-    // Find user
-    const user = await User.findOne({ telegramId });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    // Check balance but DON'T deduct yet (deduction happens on game result)
-    if (user.balance < stake) {
-      return res.status(400).json({ error: 'Insufficient balance' });
-    }
-    
-    console.log(`💰 API: Balance check passed (${user.balance} >= ${stake}), starting game without deduction`);
-    
-    // Generate winning numbers (20 random numbers from 1-100)
-    const winningNumbers = [];
-    while (winningNumbers.length < 20) {
-      const num = Math.floor(Math.random() * 100) + 1;
-      if (!winningNumbers.includes(num)) {
-        winningNumbers.push(num);
-      }
-    }
-    
-    // Calculate matches
-    const matches = selectedNumbers.filter(num => winningNumbers.includes(num));
-    
-    // Calculate winnings based on matches
-    const multipliers = {
-      0: 0, 1: 0, 2: 0, 3: 1.2, 4: 1.5, 5: 2, 
-      6: 3, 7: 5, 8: 8, 9: 12, 10: 20
-    };
-    
-    const winMultiplier = multipliers[matches.length] || 0;
-    const winAmount = Math.floor(stake * winMultiplier);
-    
-    // Add winnings to balance
-    if (winAmount > 0) {
-      user.balance += winAmount;
-    }
-    
-    // Add to game history
-    const gameRecord = `Like Bingo: ${matches.length}/10 matches, ${winAmount > 0 ? `+${winAmount}` : '0'} coins`;
-    user.gameHistory = user.gameHistory || [];
-    user.gameHistory.push(gameRecord);
-    
-    // Keep only last 20 game records
-    if (user.gameHistory.length > 20) {
-      user.gameHistory = user.gameHistory.slice(-20);
-    }
-    
-    await user.save();
-    
-    res.json({
-      success: true,
-      newBalance: user.balance,
-      winningNumbers,
-      matches,
-      winAmount,
-      gameRecord
+    // OLD GAME LOGIC IS DISABLED - ALL GAMES MUST USE gameResult FLAG
+    return res.status(400).json({ 
+      error: 'Direct game play is disabled. Use gameResult flag for balance updates.',
+      hint: 'Frontend should only call this API with gameResult: true for win/loss processing'
     });
     
   } catch (error) {

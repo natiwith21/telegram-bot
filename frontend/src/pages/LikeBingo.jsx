@@ -374,8 +374,8 @@ const LikeBingo = () => {
     try {
       // For demo mode or if no telegramId, skip API call
       if (!telegramId) {
-        // Demo mode - just proceed
-        setUserBalance(prev => prev - stake);
+        // Demo mode - just proceed without balance changes
+        console.log('🎮 No telegramId - starting demo game without balance effects');
         setGameNumber(prev => prev + 1);
         setGameState('playing');
         startDrawing();
@@ -415,8 +415,7 @@ const LikeBingo = () => {
         return;
       }
 
-      // Fallback to local game if WebSocket not connected
-      // For paid games, don't charge upfront - charge only on game end
+      // Fallback to local game if WebSocket not connected - NO API CALLS
       if (gameMode !== 'demo') {
         // Check if user has sufficient balance before starting
         if (userBalance < stake) {
@@ -425,12 +424,14 @@ const LikeBingo = () => {
           return;
         }
         
-        console.log('💰 Starting paid game without upfront charge - will process result later');
+        console.log('💰 Starting paid game locally - balance will be processed on game end only');
         showBalanceNotification(`🎮 Game started! ${stake} coins at risk`, 'info');
+      } else {
+        console.log('🎮 Starting demo game - no balance effects');
+        showBalanceNotification(`🎮 Demo game started!`, 'info');
       }
       
       setGameNumber(prev => prev + 1);
-      // Go directly to playing state, skip countdown
       setGameState('playing');
       startDrawing();
     } catch (error) {
