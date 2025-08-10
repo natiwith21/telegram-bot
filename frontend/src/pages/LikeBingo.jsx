@@ -23,6 +23,7 @@ const LikeBingo = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [hasSelectedNumber, setHasSelectedNumber] = useState(false); // New state to track if user has selected a number
   const [selectedNumber, setSelectedNumber] = useState(null); // Track which number was selected
+  const [balanceNotification, setBalanceNotification] = useState(''); // Show balance update notifications
   
   // WebSocket connection for multiplayer
   const { isConnected, lastMessage, sendMessage } = useWebSocket(telegramId, token, 'like-bingo-room');
@@ -52,18 +53,31 @@ const LikeBingo = () => {
 
   // Load user data on mount and refresh periodically
   useEffect(() => {
+    console.log('🚀 Component mounted, loading user data...');
+    console.log('TelegramId:', telegramId, 'GameMode:', gameMode);
+    
+    // Always load user data first
     loadUserData();
     generateBingoCard(); // Generate initial card
     
-    // Refresh balance every 10 seconds to stay in sync
+    // Refresh balance every 15 seconds to stay in sync
     const balanceRefreshInterval = setInterval(() => {
       if (gameMode !== 'demo' && telegramId) {
+        console.log('⏰ Auto-refreshing balance...');
         loadUserData();
       }
-    }, 10000);
+    }, 15000);
     
     return () => clearInterval(balanceRefreshInterval);
   }, [gameMode, telegramId]);
+
+  // Force reload user data when entering game
+  useEffect(() => {
+    if (telegramId && gameMode !== 'demo') {
+      console.log('🔄 Forcing balance reload for game mode:', gameMode);
+      setTimeout(() => loadUserData(), 500); // Small delay to ensure proper loading
+    }
+  }, [currentTab]);
 
   // Cleanup intervals on unmount
   useEffect(() => {
@@ -176,6 +190,9 @@ const LikeBingo = () => {
     await updateBackendBalance(winnings, 'game_win');
     // Refresh balance from backend after win
     await loadUserData();
+    
+    // Show win notification
+    showBalanceNotification(`🎉 Won ${winnings} coins! New balance: ${userBalance} coins`, 'win');
   };
 
   // Handle game loss - sync balance with backend
@@ -186,35 +203,47 @@ const LikeBingo = () => {
     await updateBackendBalance(-stake, 'game_loss');
     // Refresh balance from backend after loss
     await loadUserData();
+    
+    // Show loss notification
+    showBalanceNotification(`😢 Lost ${stake} coins. New balance: ${userBalance} coins`, 'loss');
+  };
+
+  // Show balance notification to user
+  const showBalanceNotification = (message, type = 'info') => {
+    setBalanceNotification(message);
+    setTimeout(() => {
+      setBalanceNotification('');
+    }, 5000); // Clear after 5 seconds
   };
 
   const loadUserData = async () => {
     // For demo mode, set default values
     if (!telegramId || gameMode === 'demo') {
+      console.log('Demo mode: Setting demo balance');
       setUserBalance(1000);
       setUserBonus(0);
       return;
     }
     
+    console.log(`🔄 Loading user data for telegramId: ${telegramId}`);
+    
     try {
-      const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/user/${telegramId}`);
+      const apiUrl = `https://telegram-bot-u2ni.onrender.com/api/user/${telegramId}`;
+      console.log('Fetching from:', apiUrl);
+      
+      const response = await fetch(apiUrl);
       const data = await response.json();
       
-      console.log('API Response:', data); // Debug log
+      console.log('✅ Full API Response:', JSON.stringify(data, null, 2));
       
-      if (data.success || data.telegramId) {
-        // Handle both response formats
-        const userData = data.user || data;
-        const balance = userData.balance || 0;
-        const bonus = userData.bonus || 0;
+      if (data.success && data.user) {
+        const balance = parseInt(data.user.balance) || 0;
+        const bonus = parseInt(data.user.bonus) || 0;
         
-        console.log('Setting balance:', balance, 'bonus:', bonus); // Debug log
+        console.log(`💰 Setting balance: ${balance}, bonus: ${bonus}`);
         
         setUserBalance(balance);
         setUserBonus(bonus);
-        
-        // Show sync confirmation for user
-        console.log(`✅ Balance synced from backend: ${balance} coins`);
         
         // Set stake based on game mode
         const stakeCost = parseInt(gameMode);
@@ -222,23 +251,42 @@ const LikeBingo = () => {
         
         if (balance < stakeCost) {
           setShowWarning(true);
+          console.log(`⚠️ Insufficient balance: ${balance} < ${stakeCost}`);
         } else {
           setShowWarning(false);
+          console.log(`✅ Sufficient balance: ${balance} >= ${stakeCost}`);
         }
+        
+        // Show balance in UI for user confirmation
+        console.log(`💳 Wallet synced: ${balance} coins, ${bonus} bonus`);
+        
+      } else if (data.telegramId) {
+        // Handle alternative response format
+        const balance = parseInt(data.balance) || 0;
+        const bonus = parseInt(data.bonus) || 0;
+        
+        console.log(`💰 Alternative format - Setting balance: ${balance}, bonus: ${bonus}`);
+        
+        setUserBalance(balance);
+        setUserBonus(bonus);
+        
       } else {
-        console.error('Invalid API response:', data);
-        setUserBalance(0);
-        setUserBonus(0);
+        console.error('❌ Invalid API response format:', data);
+        throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Failed to load user data:', error);
-      // Set demo values on error
+      console.error('❌ Failed to load user data:', error);
+      console.error('Error details:', error.message);
+      
+      // For demo mode, fall back to demo values
       if (gameMode === 'demo') {
         setUserBalance(1000);
         setUserBonus(0);
       } else {
+        // For paid modes, show 0 and warning
         setUserBalance(0);
         setUserBonus(0);
+        setShowWarning(true);
       }
     }
   };
@@ -327,6 +375,11 @@ const LikeBingo = () => {
         if (gameMode !== 'demo') {
           // Don't deduct locally, backend will handle it
           console.log('Starting paid game, backend will deduct stake');
+          // Refresh balance after a short delay to show updated amount
+          setTimeout(() => {
+            loadUserData();
+            showBalanceNotification(`🎮 Game started! Stake: ${stake} coins`, 'info');
+          }, 1000);
         }
         setGameNumber(prev => prev + 1);
         setGameState('playing');
@@ -946,13 +999,31 @@ const LikeBingo = () => {
       case 'Wallet':
         return (
           <div style={styles.tabContent}>
-            <h3>Wallet Details</h3>
+            <h3>💳 Wallet Details</h3>
             <div style={styles.walletDetail}>
-              <div>Balance: {userBalance} coins</div>
-              <div>Bonus: {userBonus} points</div>
-              <div>Total Games: {gameNumber - 2}</div>
-              <button onClick={loadUserData} style={styles.refreshBtn}>
-                🔄 Sync Balance
+              <div style={{fontSize: '18px', fontWeight: 'bold', color: '#059669'}}>
+                💰 Balance: {userBalance.toLocaleString()} coins
+              </div>
+              <div style={{fontSize: '16px', color: '#7c3aed'}}>
+                🎁 Bonus: {userBonus.toLocaleString()} points
+              </div>
+              <div style={{fontSize: '14px', color: '#6b7280'}}>
+                🎮 Total Games: {gameNumber - 2}
+              </div>
+              <div style={{fontSize: '14px', color: '#6b7280'}}>
+                🎯 Current Mode: {gameMode === 'demo' ? 'Demo' : `Bingo ${gameMode}`}
+              </div>
+              <div style={{fontSize: '14px', color: '#6b7280'}}>
+                💳 Status: {gameMode === 'demo' ? 'Demo Mode' : userBalance >= stake ? 'Ready to Play' : 'Insufficient Balance'}
+              </div>
+              <button 
+                onClick={() => {
+                  showBalanceNotification('🔄 Refreshing balance...', 'info');
+                  loadUserData();
+                }} 
+                style={{...styles.refreshBtn, marginTop: '15px'}}
+              >
+                🔄 Sync with Backend
               </button>
             </div>
           </div>
@@ -1010,9 +1081,9 @@ const LikeBingo = () => {
           {[
             { 
               label: "Wallet", 
-              value: userBalance, 
+              value: userBalance.toLocaleString(), 
               icon: "💰",
-              color: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+              color: userBalance >= stake ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
             },
             { 
               label: "Bonus", 
@@ -1052,6 +1123,27 @@ const LikeBingo = () => {
           ))}
         </div>
       </div>
+
+      {/* Balance Notification */}
+      {balanceNotification && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          style={{
+            backgroundColor: balanceNotification.includes('Won') ? '#10b981' : '#ef4444',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '8px',
+            marginBottom: '10px',
+            textAlign: 'center',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+          }}
+        >
+          {balanceNotification}
+        </motion.div>
+      )}
 
       {/* WebSocket Connection Status */}
       {isConnected && (
