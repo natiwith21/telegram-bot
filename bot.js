@@ -519,11 +519,11 @@ bot.action('bingo_demo', async (ctx) => {
   });
   await session.save();
   
-  await ctx.editMessageText(`🎮 **Free Bingo Demo**\n\nNo payment required! Practice and learn how to play Bingo.\n\n🔗 **Direct Links:**\n• Desktop: ${process.env.WEB_APP_URL}/bingo?mode=demo&token=${sessionToken}\n• Mobile: Open link below`, {
+  await ctx.editMessageText(`🎮 **Free Bingo Demo**\n\nNo payment required! Practice and learn how to play Bingo.\n\n🔗 **Direct Links:**\n• Desktop: ${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}\n• Mobile: Open link below`, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.url('🎮 Play Demo (Browser)', `${process.env.WEB_APP_URL}/bingo?mode=demo&token=${sessionToken}`)],
-      [Markup.button.webApp(`🎮 Mini App`, `${process.env.WEB_APP_URL}/bingo?mode=demo&token=${sessionToken}`)],
+      [Markup.button.url('🎮 Play Demo (Browser)', `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)],
+      [Markup.button.webApp(`🎮 Mini App`, `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)],
       [Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]
     ]).reply_markup
   });
@@ -572,8 +572,8 @@ paidBingoModes.forEach(mode => {
           `🎮 Try the demo version or play other games to earn coins!`,
           {
             reply_markup: Markup.inlineKeyboard([
-              [Markup.button.url('🌐 Open Wallet (Browser)', `${process.env.WEB_APP_URL}/menu?token=${sessionToken}&notification=insufficient_balance&required=${config.cost}&current=${user.balance}`)],
-              [Markup.button.webApp('📱 Wallet Mini App', `${process.env.WEB_APP_URL}/menu?token=${sessionToken}&notification=insufficient_balance&required=${config.cost}&current=${user.balance}`)],
+              [Markup.button.url('🌐 Open Wallet (Browser)', `${process.env.WEB_APP_URL}/like-bingo?token=${sessionToken}&notification=insufficient_balance&required=${config.cost}&current=${user.balance}`)],
+              [Markup.button.webApp('📱 Wallet Mini App', `${process.env.WEB_APP_URL}/like-bingo?token=${sessionToken}&notification=insufficient_balance&required=${config.cost}&current=${user.balance}`)],
               [Markup.button.callback('🎮 Play Demo', 'bingo_demo')],
               [Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]
             ]).reply_markup
@@ -606,8 +606,8 @@ paidBingoModes.forEach(mode => {
         `🎯 Good luck! Choose how to play:`,
         {
           reply_markup: Markup.inlineKeyboard([
-            [Markup.button.url('🌐 Browser Game', `${process.env.WEB_APP_URL}/bingo?mode=${gameMode}&token=${sessionToken}`)],
-            [Markup.button.webApp(`📱 Mini App`, `${process.env.WEB_APP_URL}/bingo?mode=${gameMode}&token=${sessionToken}`)],
+            [Markup.button.url('🌐 Browser Game', `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)],
+            [Markup.button.webApp(`📱 Mini App`, `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)],
             [Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]
           ]).reply_markup
         }
