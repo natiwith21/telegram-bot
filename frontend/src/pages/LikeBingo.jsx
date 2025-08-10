@@ -141,9 +141,13 @@ const LikeBingo = () => {
 
   // Process game result and update balance accordingly
   const processGameResult = async (isWin) => {
-    if (gameMode === 'demo' || !telegramId) return;
+    if (gameMode === 'demo' || !telegramId) {
+      console.log(`🎮 Demo mode or no telegramId - skipping balance update`);
+      return;
+    }
     
     console.log(`🎯 Processing game result: ${isWin ? 'WIN' : 'LOSS'} for stake ${stake}`);
+    console.log(`📊 Current frontend balance before processing: ${userBalance}`);
     
     try {
       const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/like-bingo-play`, {
@@ -168,12 +172,16 @@ const LikeBingo = () => {
         
         if (isWin) {
           const winnings = data.winAmount || (stake * getWinMultiplier());
-          console.log(`🏆 WIN: Deducted ${stake}, won ${winnings}, net: +${winnings - stake}, balance: ${data.newBalance}`);
+          console.log(`🏆 WIN RESULT: Deducted ${stake}, won ${winnings}, net: +${winnings - stake}`);
+          console.log(`📈 Balance updated from ${userBalance} to ${data.newBalance}`);
           showBalanceNotification(`🎉 Won ${winnings} coins! Net gain: +${winnings - stake}`, 'win');
         } else {
-          console.log(`😢 LOSS: Deducted ${stake} coins, balance: ${data.newBalance}`);
+          console.log(`😢 LOSS RESULT: Deducted ${stake} coins`);
+          console.log(`📉 Balance updated from ${userBalance} to ${data.newBalance}`);
           showBalanceNotification(`😢 Lost ${stake} coins. New balance: ${data.newBalance}`, 'loss');
         }
+        
+        console.log(`✅ Game result processing completed successfully`);
       } else {
         console.error('Backend game result processing failed:', data.error);
       }
@@ -509,23 +517,29 @@ const LikeBingo = () => {
             drawIntervalRef.current = null;
             setGameState('finished');
             
-            // Show game end message
-            setTimeout(() => {
-              alert('🎯 Game Complete! All 20 numbers have been called. No Bingo claimed - game ends in a draw!');
-              
-              // Send game limit reached message to WebSocket
-              if (isConnected) {
-                sendMessage({
-                  type: 'game_limit_reached',
-                  roomId: 'like-bingo-room'
-                });
+            // Show game end message and process as loss
+            setTimeout(async () => {
+            alert('🎯 Game Complete! All 20 numbers have been called. No Bingo claimed - you lose!');
+            
+            // Process as loss for paid games
+            if (gameMode !== 'demo') {
+            console.log('⏰ Game timed out - processing as loss');
+            await handleGameLoss();
+            }
+            
+            // Send game limit reached message to WebSocket
+            if (isConnected) {
+              sendMessage({
+                type: 'game_limit_reached',
+              roomId: 'like-bingo-room'
+              });
               }
-              
-              // Auto-reset after 3 seconds
-              setTimeout(() => {
-                resetGame();
-              }, 3000);
-            }, 500);
+                
+                // Auto-reset after 3 seconds
+                setTimeout(() => {
+                  resetGame();
+                }, 3000);
+              }, 500);
             
             return prev;
           }
@@ -537,6 +551,18 @@ const LikeBingo = () => {
             clearInterval(drawIntervalRef.current);
             drawIntervalRef.current = null;
             setGameState('finished');
+            
+            // Process as loss for paid games when no numbers left
+            if (gameMode !== 'demo') {
+              console.log('🔢 No numbers left - processing as loss');
+              setTimeout(async () => {
+                await handleGameLoss();
+                setTimeout(() => resetGame(), 2000);
+              }, 500);
+            } else {
+              setTimeout(() => resetGame(), 2000);
+            }
+            
             return prev;
           }
 
