@@ -50,11 +50,20 @@ const LikeBingo = () => {
   // Static display grid (1-100 for pre-game)
   const staticNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
 
-  // Load user data on mount
+  // Load user data on mount and refresh periodically
   useEffect(() => {
     loadUserData();
     generateBingoCard(); // Generate initial card
-  }, []);
+    
+    // Refresh balance every 10 seconds to stay in sync
+    const balanceRefreshInterval = setInterval(() => {
+      if (gameMode !== 'demo' && telegramId) {
+        loadUserData();
+      }
+    }, 10000);
+    
+    return () => clearInterval(balanceRefreshInterval);
+  }, [gameMode, telegramId]);
 
   // Cleanup intervals on unmount
   useEffect(() => {
@@ -74,42 +83,46 @@ const LikeBingo = () => {
   useEffect(() => {
     if (!lastMessage) return;
 
-    switch (lastMessage.type) {
-      case 'game_start':
-        setGameStarted(true);
-        setGameState('playing');
-        startDrawing();
-        break;
-        
-      case 'game_end':
-        setGameState('finished');
-        setGameStarted(false);
-        break;
-        
-      case 'bingo_claimed':
-        // Someone claimed Bingo
-        setBingoWinner(lastMessage.winner);
-        setGameState('finished');
-        
-        if (lastMessage.winner === telegramId) {
-          // Handle win - update balance based on game mode
-          handleGameWin();
-          alert(`🎉 Congratulations! You won the Bingo game!`);
-        } else {
-          // Handle loss - record the loss in backend
-          handleGameLoss();
-          alert(`🏆 ${lastMessage.winnerName || 'Another player'} won the Bingo game!`);
-        }
-        
-        // Reset game after showing result
-        setTimeout(() => {
-          resetGame();
-        }, 3000);
-        break;
-        
-      default:
-        break;
-    }
+    const handleMessage = async () => {
+      switch (lastMessage.type) {
+        case 'game_start':
+          setGameStarted(true);
+          setGameState('playing');
+          startDrawing();
+          break;
+          
+        case 'game_end':
+          setGameState('finished');
+          setGameStarted(false);
+          break;
+          
+        case 'bingo_claimed':
+          // Someone claimed Bingo
+          setBingoWinner(lastMessage.winner);
+          setGameState('finished');
+          
+          if (lastMessage.winner === telegramId) {
+            // Handle win - update balance based on game mode
+            await handleGameWin();
+            alert(`🎉 Congratulations! You won the Bingo game!`);
+          } else {
+            // Handle loss - record the loss in backend
+            await handleGameLoss();
+            alert(`🏆 ${lastMessage.winnerName || 'Another player'} won the Bingo game!`);
+          }
+          
+          // Reset game after showing result
+          setTimeout(() => {
+            resetGame();
+          }, 3000);
+          break;
+          
+        default:
+          break;
+      }
+    };
+
+    handleMessage();
   }, [lastMessage]);
 
   // Update backend balance and sync with frontend
@@ -136,6 +149,9 @@ const LikeBingo = () => {
       if (data.success) {
         // Update frontend balance with real backend balance
         setUserBalance(data.newBalance);
+        console.log(`Balance updated: ${reason}, new balance: ${data.newBalance}`);
+      } else {
+        console.error('Backend balance update failed:', data.error);
       }
     } catch (error) {
       console.error('Failed to update backend balance:', error);
@@ -158,13 +174,17 @@ const LikeBingo = () => {
     
     // Update backend with winnings and sync balance
     await updateBackendBalance(winnings, 'game_win');
+    // Refresh balance from backend after win
+    await loadUserData();
   };
 
   // Handle game loss - sync balance with backend
   const handleGameLoss = async () => {
     if (gameMode === 'demo') return; // No balance changes for demo
     
-    // Just sync the balance with backend to ensure accuracy
+    // Update backend to record the loss and sync balance
+    await updateBackendBalance(-stake, 'game_loss');
+    // Refresh balance from backend after loss
     await loadUserData();
   };
 
@@ -180,17 +200,35 @@ const LikeBingo = () => {
       const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/user/${telegramId}`);
       const data = await response.json();
       
-      if (data.success) {
-        setUserBalance(data.user.balance || 0);
-        setUserBonus(data.user.bonus || 0);
+      console.log('API Response:', data); // Debug log
+      
+      if (data.success || data.telegramId) {
+        // Handle both response formats
+        const userData = data.user || data;
+        const balance = userData.balance || 0;
+        const bonus = userData.bonus || 0;
+        
+        console.log('Setting balance:', balance, 'bonus:', bonus); // Debug log
+        
+        setUserBalance(balance);
+        setUserBonus(bonus);
+        
+        // Show sync confirmation for user
+        console.log(`✅ Balance synced from backend: ${balance} coins`);
         
         // Set stake based on game mode
         const stakeCost = parseInt(gameMode);
         setStake(stakeCost);
         
-        if (data.user.balance < stakeCost) {
+        if (balance < stakeCost) {
           setShowWarning(true);
+        } else {
+          setShowWarning(false);
         }
+      } else {
+        console.error('Invalid API response:', data);
+        setUserBalance(0);
+        setUserBonus(0);
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
@@ -285,10 +323,10 @@ const LikeBingo = () => {
           gameMode
         });
         
-        // For paid games, deduct stake and update backend
+        // For paid games, just track game start - backend handles balance deduction
         if (gameMode !== 'demo') {
-          await updateBackendBalance(-stake, 'game_start');
-          setUserBalance(prev => prev - stake);
+          // Don't deduct locally, backend will handle it
+          console.log('Starting paid game, backend will deduct stake');
         }
         setGameNumber(prev => prev + 1);
         setGameState('playing');
@@ -313,11 +351,15 @@ const LikeBingo = () => {
       const data = await response.json();
       
       if (data.success) {
+        // Update balance with real backend balance
         setUserBalance(data.newBalance);
         setGameNumber(prev => prev + 1);
         // Go directly to playing state, skip countdown
         setGameState('playing');
         startDrawing();
+        
+        // Also refresh user data to ensure sync
+        setTimeout(() => loadUserData(), 1000);
       } else {
         alert(data.error || 'Failed to start game');
       }
@@ -478,11 +520,12 @@ const LikeBingo = () => {
     
     setGameState('finished');
     
-    // Calculate win amount (example: 5x stake for bingo)
-    const winAmount = stake * 5;
-    setUserBalance(prev => prev + winAmount);
+    // Handle win through backend
+    if (gameMode !== 'demo') {
+      await handleGameWin();
+    }
     
-    alert(`🎉 BINGO! You won ${winAmount} coins!`);
+    alert(`🎉 BINGO! You won the game!`);
     
     // Reset game
     setTimeout(() => {
@@ -516,7 +559,9 @@ const LikeBingo = () => {
     generateBingoCard(); // Generate new card for next game
     
     // Refresh user balance after game
-    refreshWallet();
+    if (gameMode !== 'demo' && telegramId) {
+      loadUserData();
+    }
   };
 
   const refreshCard = () => {
@@ -906,8 +951,8 @@ const LikeBingo = () => {
               <div>Balance: {userBalance} coins</div>
               <div>Bonus: {userBonus} points</div>
               <div>Total Games: {gameNumber - 2}</div>
-              <button onClick={refreshWallet} style={styles.refreshBtn}>
-                Refresh Wallet
+              <button onClick={loadUserData} style={styles.refreshBtn}>
+                🔄 Sync Balance
               </button>
             </div>
           </div>

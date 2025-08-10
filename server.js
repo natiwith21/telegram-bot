@@ -331,7 +331,10 @@ app.post('/api/like-bingo-play', async (req, res) => {
         user.gameHistory = user.gameHistory || [];
         user.gameHistory.push(gameResult);
       } else {
-        // Handle loss - stake already deducted, just log it
+        // Handle loss - deduct stake if not already deducted
+        if (reason === 'game_loss') {
+          user.balance -= stake;
+        }
         const gameResult = `Bingo ${gameMode}: LOSS -${stake} coins`;
         user.gameHistory = user.gameHistory || [];
         user.gameHistory.push(gameResult);
