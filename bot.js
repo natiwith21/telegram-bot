@@ -2875,6 +2875,7 @@ bot.action('withdraw', async (ctx) => {
 
 // Withdraw CBE handler
 bot.action('withdraw_cbe', async (ctx) => {
+  console.log(`🏦 CBE Withdrawal selected by user ${ctx.from.id}`);
   ctx.session.withdrawState = 'waiting_for_cbe_account';
   ctx.session.withdrawMethod = 'CBE Bank';
   await ctx.editMessageText(
@@ -2885,6 +2886,7 @@ bot.action('withdraw_cbe', async (ctx) => {
 
 // Withdraw Telebirr handler
 bot.action('withdraw_telebirr', async (ctx) => {
+  console.log(`📱 Telebirr Withdrawal selected by user ${ctx.from.id}`);
   ctx.session.withdrawState = 'waiting_for_telebirr_account';
   ctx.session.withdrawMethod = 'Telebirr';
   await ctx.editMessageText(
@@ -2895,7 +2897,13 @@ bot.action('withdraw_telebirr', async (ctx) => {
 
 // Handle text input for withdraw flow
 bot.on('text', async (ctx, next) => {
+  // Skip if this is a command (starts with /)
+  if (ctx.message.text.startsWith('/')) {
+    return next();
+  }
+  
   if (ctx.session && ctx.session.withdrawState) {
+    console.log(`💬 Text received in withdrawal flow: "${ctx.message.text}" from user ${ctx.from.id}, state: ${ctx.session.withdrawState}`);
     const telegramId = ctx.from.id.toString();
     const user = await User.findOne({ telegramId });
     if (!user) {
@@ -2903,12 +2911,14 @@ bot.on('text', async (ctx, next) => {
       return;
     }
     if (ctx.session.withdrawState === 'waiting_for_cbe_account') {
+      console.log(`🏦 CBE account number received from user ${ctx.from.id}: ${ctx.message.text.trim()}`);
       ctx.session.withdrawAccount = ctx.message.text.trim();
       ctx.session.withdrawState = 'waiting_for_amount';
       await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
       return;
     }
     if (ctx.session.withdrawState === 'waiting_for_telebirr_account') {
+      console.log(`📱 Telebirr phone number received from user ${ctx.from.id}: ${ctx.message.text.trim()}`);
       ctx.session.withdrawAccount = ctx.message.text.trim();
       ctx.session.withdrawState = 'waiting_for_amount';
       await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
