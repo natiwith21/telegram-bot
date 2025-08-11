@@ -1858,8 +1858,12 @@ bot.on('text', async (ctx) => {
           await ctx.reply('❌ Invalid amount. Please enter a valid number in ETB.');
           return;
         }
+        if (amount < 50) {
+          await ctx.reply(`❌ **Minimum Withdrawal Amount**\n\n🔒 **Minimum:** 50 ETB\n💰 **You entered:** ${amount} ETB\n\n💡 **Please enter an amount of at least 50 ETB to proceed.**`);
+          return;
+        }
         if (amount > user.balance) {
-          await ctx.reply(`❌ You do not have enough balance to withdraw ${amount} ETB. Your current balance is ${user.balance} coins.`);
+          await ctx.reply(`❌ **Insufficient Balance**\n\n💰 **Your Balance:** ${user.balance} coins\n💸 **Withdrawal Amount:** ${amount} ETB\n⚡ **Shortage:** ${amount - user.balance} coins\n\n💡 **Please enter a smaller amount or deposit more funds.**`);
           return;
         }
         
@@ -2297,6 +2301,7 @@ bot.launch().then(async () => {
       { command: 'register', description: '📱 Register your account' },
       { command: 'balance', description: '💰 Check your balance' },
       { command: 'deposit', description: '🏦 Deposit funds' },
+      { command: 'withdraw', description: '🏧 Withdraw your funds' },
       { command: 'instructions', description: '🎮 How to play guide' },
       { command: 'support', description: '👨‍💻 Contact support' },
       { command: 'invite', description: '👥 Invite your friends' },
@@ -2896,13 +2901,33 @@ bot.command('withdraw', async (ctx) => {
     }
     
     // Check if user has played at least 3 games
-    if (!user.gameHistory || user.gameHistory.length < 3) {
-      await ctx.reply('❌ You must play at least 3 games before you can withdraw.\n\n🎮 Play more games to unlock withdrawals!', {
-        parse_mode: 'Markdown',
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('🎮 Play Bingo', 'play_bingo')]
-        ]).reply_markup
-      });
+    const gamesPlayed = user.gameHistory ? user.gameHistory.length : 0;
+    if (gamesPlayed < 3) {
+      await ctx.reply(
+        `❌ **Withdrawal Locked**\n\n🎮 **Games Required:** You must play at least 3 games before you can withdraw.\n\n📊 **Your Progress:**\n• Games Played: ${gamesPlayed}/3\n• Games Remaining: ${3 - gamesPlayed}\n\n💰 **Current Balance:** ${user.balance} coins\n\n🎯 **Play more games to unlock withdrawals!**`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+            [Markup.button.callback('💰 Check Balance', 'balance')]
+          ]).reply_markup
+        }
+      );
+      return;
+    }
+    
+    // Check minimum withdrawal balance
+    if (user.balance < 50) {
+      await ctx.reply(
+        `❌ **Insufficient Balance**\n\n💰 **Current Balance:** ${user.balance} coins\n🔒 **Minimum Withdrawal:** 50 coins\n⚡ **Needed:** ${50 - user.balance} more coins\n\n💡 **To withdraw, you need:**\n• At least 50 coins in your balance\n• Have played at least 3 games ✅\n\n🎮 **Play more games or deposit to reach minimum!**`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+            [Markup.button.callback('💰 Deposit', 'deposit')]
+          ]).reply_markup
+        }
+      );
       return;
     }
     
@@ -2940,14 +2965,35 @@ bot.action('withdraw', async (ctx) => {
       return;
     }
     // Check if user has played at least 3 games
-    if (!user.gameHistory || user.gameHistory.length < 3) {
-      await ctx.editMessageText('❌ You must play at least 3 games before you can withdraw.\n\n🎮 Play more games to unlock withdrawals!', {
-        parse_mode: 'Markdown',
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
-          [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
-        ]).reply_markup
-      });
+    const gamesPlayed = user.gameHistory ? user.gameHistory.length : 0;
+    if (gamesPlayed < 3) {
+      await ctx.editMessageText(
+        `❌ **Withdrawal Locked**\n\n🎮 **Games Required:** You must play at least 3 games before you can withdraw.\n\n📊 **Your Progress:**\n• Games Played: ${gamesPlayed}/3\n• Games Remaining: ${3 - gamesPlayed}\n\n💰 **Current Balance:** ${user.balance} coins\n\n🎯 **Play more games to unlock withdrawals!**`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+            [Markup.button.callback('💰 Check Balance', 'balance')],
+            [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+          ]).reply_markup
+        }
+      );
+      return;
+    }
+    
+    // Check minimum withdrawal balance
+    if (user.balance < 50) {
+      await ctx.editMessageText(
+        `❌ **Insufficient Balance**\n\n💰 **Current Balance:** ${user.balance} coins\n🔒 **Minimum Withdrawal:** 50 coins\n⚡ **Needed:** ${50 - user.balance} more coins\n\n💡 **To withdraw, you need:**\n• At least 50 coins in your balance\n• Have played at least 3 games ✅\n\n🎮 **Play more games or deposit to reach minimum!**`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+            [Markup.button.callback('💰 Deposit', 'deposit')],
+            [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+          ]).reply_markup
+        }
+      );
       return;
     }
     // Start withdraw flow
