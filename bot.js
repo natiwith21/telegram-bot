@@ -1825,8 +1825,92 @@ bot.on('text', async (ctx) => {
     return; // Important to return here
   }
   
-  // If not in any deposit state, ignore the text
-  console.log('❌ Text not handled - not in deposit flow');
+  // Check if user is in withdrawal flow
+  else if (ctx.session && ctx.session.withdrawState) {
+    console.log(`💬 Text received in withdrawal flow: "${ctx.message.text}" from user ${ctx.from.id}, state: ${ctx.session.withdrawState}`);
+    
+    try {
+      const user = await User.findOne({ telegramId: userId });
+      if (!user) {
+        await ctx.reply('❌ You need to register first!');
+        return;
+      }
+      
+      if (ctx.session.withdrawState === 'waiting_for_cbe_account') {
+        console.log(`🏦 CBE account number received from user ${ctx.from.id}: ${ctx.message.text.trim()}`);
+        ctx.session.withdrawAccount = ctx.message.text.trim();
+        ctx.session.withdrawState = 'waiting_for_amount';
+        await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
+        return;
+      }
+      
+      if (ctx.session.withdrawState === 'waiting_for_telebirr_account') {
+        console.log(`📱 Telebirr phone number received from user ${ctx.from.id}: ${ctx.message.text.trim()}`);
+        ctx.session.withdrawAccount = ctx.message.text.trim();
+        ctx.session.withdrawState = 'waiting_for_amount';
+        await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
+        return;
+      }
+      
+      if (ctx.session.withdrawState === 'waiting_for_amount') {
+        const amount = parseInt(ctx.message.text.trim());
+        if (isNaN(amount) || amount <= 0) {
+          await ctx.reply('❌ Invalid amount. Please enter a valid number in ETB.');
+          return;
+        }
+        if (amount > user.balance) {
+          await ctx.reply(`❌ You do not have enough balance to withdraw ${amount} ETB. Your current balance is ${user.balance} coins.`);
+          return;
+        }
+        
+        // Save withdrawal request
+        ctx.session.withdrawAmount = amount;
+        ctx.session.withdrawState = null;
+        
+        // Create withdrawal record for tracking
+        const withdrawalId = `WD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Notify admin(s) with finish button
+        const adminMessage = `🔔 **New Withdrawal Request**\n\n👤 **User:** @${username || 'no_username'}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🏦 **Method:** ${ctx.session.withdrawMethod}\n📱 **Account:** ${ctx.session.withdrawAccount}\n💰 **User Balance:** ${user.balance} coins\n\nPlease review and process this withdrawal.`;
+        
+        for (const agentId of PAYMENT_AGENTS) {
+          try {
+            await bot.telegram.sendMessage(agentId, adminMessage, { 
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: '✅ Finish Payment', callback_data: `finish_withdrawal_${user.telegramId}_${amount}_${withdrawalId}` }
+                ]]
+              }
+            });
+          } catch (error) {
+            console.error(`❌ Failed to notify agent ${agentId}:`, error.message);
+          }
+        }
+        
+        // Send confirmation to user with 2-hour message
+        await ctx.reply('✅ Your withdrawal request has been submitted!\n\n⏰ You will receive your payment in 2 hours.\n\nOur payment team will process your request soon.');
+        
+        // Lock the funds (deduct from balance)
+        user.balance -= amount;
+        await user.save();
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error in withdrawal text handler:', error);
+      await ctx.reply('❌ Something went wrong. Please try again or contact support.');
+      // Clear withdrawal state to prevent stuck sessions
+      if (ctx.session) {
+        ctx.session.withdrawState = null;
+        ctx.session.withdrawMethod = null;
+        ctx.session.withdrawAccount = null;
+      }
+      return;
+    }
+  }
+  
+  // If not in any deposit or withdrawal state, ignore the text
+  console.log('❌ Text not handled - not in deposit or withdrawal flow');
 });
 
 // Step 4: CBE Bank Payment
@@ -2917,94 +3001,7 @@ bot.action('withdraw_telebirr', async (ctx) => {
   }
 });
 
-// Handle text input for withdraw flow
-bot.on('text', async (ctx, next) => {
-  try {
-    // Skip if this is a command (starts with /)
-    if (ctx.message.text.startsWith('/')) {
-      return next();
-    }
-    
-    if (ctx.session && ctx.session.withdrawState) {
-      console.log(`💬 Text received in withdrawal flow: "${ctx.message.text}" from user ${ctx.from.id}, state: ${ctx.session.withdrawState}`);
-      const telegramId = ctx.from.id.toString();
-      const user = await User.findOne({ telegramId });
-      if (!user) {
-        await ctx.reply('❌ You need to register first!');
-        return;
-      }
-      if (ctx.session.withdrawState === 'waiting_for_cbe_account') {
-        console.log(`🏦 CBE account number received from user ${ctx.from.id}: ${ctx.message.text.trim()}`);
-        ctx.session.withdrawAccount = ctx.message.text.trim();
-        ctx.session.withdrawState = 'waiting_for_amount';
-        await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
-        return;
-      }
-      if (ctx.session.withdrawState === 'waiting_for_telebirr_account') {
-        console.log(`📱 Telebirr phone number received from user ${ctx.from.id}: ${ctx.message.text.trim()}`);
-        ctx.session.withdrawAccount = ctx.message.text.trim();
-        ctx.session.withdrawState = 'waiting_for_amount';
-        await ctx.reply('💸 Please enter the amount you wish to withdraw (in ETB):');
-        return;
-      }
-      if (ctx.session.withdrawState === 'waiting_for_amount') {
-        const amount = parseInt(ctx.message.text.trim());
-        if (isNaN(amount) || amount <= 0) {
-          await ctx.reply('❌ Invalid amount. Please enter a valid number in ETB.');
-          return;
-        }
-        if (amount > user.balance) {
-          await ctx.reply(`❌ You do not have enough balance to withdraw ${amount} ETB. Your current balance is ${user.balance} coins.`);
-          return;
-        }
-        // Save withdrawal request
-        ctx.session.withdrawAmount = amount;
-        ctx.session.withdrawState = null;
-        
-        // Create withdrawal record for tracking
-        const withdrawalId = `WD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        // Notify admin(s) with finish button
-        const adminMessage = `🔔 **New Withdrawal Request**\n\n👤 **User:** @${user.username || 'no_username'}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🏦 **Method:** ${ctx.session.withdrawMethod}\n📱 **Account:** ${ctx.session.withdrawAccount}\n💰 **User Balance:** ${user.balance} coins\n\nPlease review and process this withdrawal.`;
-        
-        for (const agentId of PAYMENT_AGENTS) {
-          try {
-            await bot.telegram.sendMessage(agentId, adminMessage, { 
-              parse_mode: 'Markdown',
-              reply_markup: {
-                inline_keyboard: [[
-                  { text: '✅ Finish Payment', callback_data: `finish_withdrawal_${user.telegramId}_${amount}_${withdrawalId}` }
-                ]]
-              }
-            });
-          } catch (error) {
-            console.error(`❌ Failed to notify agent ${agentId}:`, error.message);
-          }
-        }
-        
-        // Send confirmation to user with 2-hour message
-        await ctx.reply('✅ Your withdrawal request has been submitted!\n\n⏰ You will receive your payment in 2 hours.\n\nOur payment team will process your request soon.');
-        
-        // Lock the funds (deduct from balance)
-        user.balance -= amount;
-        await user.save();
-        return;
-      }
-    }
-    // If not in withdraw flow, continue to next handler
-    return next();
-  } catch (error) {
-    console.error('❌ Error in withdrawal text handler:', error);
-    await ctx.reply('❌ Something went wrong. Please try again or contact support.');
-    // Clear withdrawal state to prevent stuck sessions
-    if (ctx.session) {
-      ctx.session.withdrawState = null;
-      ctx.session.withdrawMethod = null;
-      ctx.session.withdrawAccount = null;
-    }
-    return;
-  }
-});
+// Duplicate withdrawal text handler removed - now handled in main text handler above
 
 // Add HTTP server for Render deployment
 const express = require('express');
