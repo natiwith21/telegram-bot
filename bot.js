@@ -6,6 +6,32 @@ const Payment = require('./models/Payment');
 const GameSession = require('./models/GameSession');
 const crypto = require('crypto');
 
+// Critical: Add global error handlers to prevent crashes
+process.on('uncaughtException', (error) => {
+  console.error('💥 UNCAUGHT EXCEPTION - Server would crash without this handler:');
+  console.error('Error:', error.message);
+  console.error('Stack:', error.stack);
+  console.error('⚠️  Server continuing but this should be investigated!');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 UNHANDLED PROMISE REJECTION - Server would crash without this handler:');
+  console.error('Reason:', reason);
+  console.error('Promise:', promise);
+  console.error('⚠️  Server continuing but this should be investigated!');
+});
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('🛑 Received SIGINT - shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('🛑 Received SIGTERM - shutting down gracefully...');
+  process.exit(0);
+});
+
 // Import WebSocket functions (optional - real-time features)
 let wsServer = null;
 try {
@@ -13,6 +39,14 @@ try {
   if (require('fs').existsSync('./websocket-server.js')) {
     wsServer = require('./websocket-server');
     console.log('✅ WebSocket integration loaded');
+    
+    // Add error handling for WebSocket to prevent crashes
+    if (wsServer && wsServer.on) {
+      wsServer.on('error', (error) => {
+        console.error('🔌 WebSocket server error:', error.message);
+        console.error('⚠️  WebSocket error handled - server continuing');
+      });
+    }
   } else {
     console.log('⚠️  WebSocket server not found - real-time features disabled');
   }
@@ -50,7 +84,13 @@ bot.use((ctx, next) => {
   return next();
 });
 
-connectDB();
+// Connect to database with error handling
+connectDB().catch((error) => {
+  console.error('💥 Failed to connect to database:', error);
+  console.error('🛑 Server cannot continue without database - exiting...');
+  process.exit(1);
+});
+
 console.log("🤖 Bot is starting...");
 
 // Debug environment variables
@@ -59,6 +99,34 @@ console.log('BOT_TOKEN:', process.env.BOT_TOKEN ? 'Found' : '❌ Missing');
 console.log('WEB_APP_URL:', process.env.WEB_APP_URL || '❌ Missing');
 console.log('ADMIN_ID_1:', process.env.ADMIN_ID_1 || '❌ Missing');
 console.log('ADMIN_ID_2:', process.env.ADMIN_ID_2 || '❌ Missing');
+
+// Memory monitoring to prevent crashes
+const MEMORY_LIMIT_MB = 450; // Safe limit for most hosting platforms
+let memoryCheckInterval;
+
+function startMemoryMonitoring() {
+  memoryCheckInterval = setInterval(() => {
+    const memUsage = process.memoryUsage();
+    const memUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+    
+    console.log(`📊 Memory usage: ${memUsedMB}MB / ${MEMORY_LIMIT_MB}MB limit`);
+    
+    if (memUsedMB > MEMORY_LIMIT_MB) {
+      console.error('🚨 MEMORY LIMIT EXCEEDED!');
+      console.error(`Current usage: ${memUsedMB}MB exceeds limit: ${MEMORY_LIMIT_MB}MB`);
+      console.error('🔄 Initiating graceful restart to prevent crash...');
+      
+      // Clear intervals to prevent memory leaks
+      if (memoryCheckInterval) clearInterval(memoryCheckInterval);
+      
+      // Exit gracefully - hosting platform will restart
+      process.exit(1);
+    }
+  }, 60000); // Check every minute
+}
+
+// Start monitoring after 5 minutes (allow startup time)
+setTimeout(startMemoryMonitoring, 5 * 60 * 1000);
 
 // Bingo Game Configuration (using wallet balance instead of bank payment)
 const BINGO_CONFIG = {
@@ -2807,12 +2875,34 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString()
-  });
+app.get('/health', async (req, res) => {
+  try {
+    // Check database connection
+    const mongoose = require('mongoose');
+    const dbStatus = mongoose.connection.readyState; // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+    
+    const healthStatus = {
+      status: dbStatus === 1 ? 'healthy' : 'unhealthy',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      memory: process.memoryUsage(),
+      database: {
+        status: dbStatus === 1 ? 'connected' : 'disconnected',
+        readyState: dbStatus
+      },
+      bot: {
+        status: bot ? 'initialized' : 'not initialized'
+      }
+    };
+    
+    res.json(healthStatus);
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // API Routes for frontend
@@ -2975,6 +3065,28 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+// Start server with error handling
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 HTTP server running on port ${PORT} for Render deployment`);
+  console.log(`🚀 SERVER FULLY STARTED - All systems operational!`);
+  console.log(`📊 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+  console.log(`⏰ Started at: ${new Date().toISOString()}`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('💥 HTTP Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`);
+    process.exit(1);
+  }
+});
+
+// Graceful shutdown for the server
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received - closing server...');
+  server.close(() => {
+    console.log('✅ Server closed successfully');
+    process.exit(0);
+  });
 });
