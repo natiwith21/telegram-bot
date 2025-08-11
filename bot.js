@@ -1543,6 +1543,70 @@ bot.command('getid', async (ctx) => {
   );
 });
 
+// Withdraw command - Withdraw funds 
+bot.command('withdraw', async (ctx) => {
+  try {
+    console.log(`💰 /withdraw command from user ${ctx.from.id}`);
+    const telegramId = ctx.from.id.toString();
+    const user = await User.findOne({ telegramId });
+    if (!user) {
+      await ctx.reply('❌ You need to register first!', {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('📝 Register Now', 'register')]
+        ]).reply_markup
+      });
+      return;
+    }
+    
+    // Check if user has played at least 3 games
+    const gamesPlayed = user.gameHistory ? user.gameHistory.length : 0;
+    if (gamesPlayed < 3) {
+      await ctx.reply(
+        `❌ **Withdrawal Locked**\n\n🎮 **Games Required:** You must play at least 3 games before you can withdraw.\n\n📊 **Your Progress:**\n• Games Played: ${gamesPlayed}/3\n• Games Remaining: ${3 - gamesPlayed}\n\n💰 **Current Balance:** ${user.balance} coins\n\n🎯 **Play more games to unlock withdrawals!**`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+            [Markup.button.callback('💰 Check Balance', 'balance')]
+          ]).reply_markup
+        }
+      );
+      return;
+    }
+    
+    // Check minimum withdrawal balance
+    if (user.balance < 50) {
+      await ctx.reply(
+        `❌ **Insufficient Balance**\n\n💰 **Current Balance:** ${user.balance} coins\n🔒 **Minimum Withdrawal:** 50 coins\n⚡ **Needed:** ${50 - user.balance} more coins\n\n💡 **To withdraw, you need:**\n• At least 50 coins in your balance\n• Have played at least 3 games ✅\n\n🎮 **Play more games or deposit to reach minimum!**`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
+            [Markup.button.callback('💰 Deposit', 'deposit')]
+          ]).reply_markup
+        }
+      );
+      return;
+    }
+    
+    // Start withdraw flow
+    ctx.session.withdrawState = 'waiting_for_method';
+    await ctx.reply(
+      `🏧 **Withdraw Flow**\n\nChoose your preferred withdrawal method:`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🏦 CBE Bank', 'withdraw_cbe')],
+          [Markup.button.callback('📱 Telebirr', 'withdraw_telebirr')]
+        ]).reply_markup
+      }
+    );
+  } catch (error) {
+    console.error('❌ Error in /withdraw command:', error);
+    await ctx.reply('❌ Error processing withdrawal command. Please try again or contact support.');
+  }
+});
+
 // Quick play command - direct access to games
 bot.command('play', async (ctx) => {
   if (await checkUserRegistration(ctx, 'play')) {
@@ -2885,69 +2949,7 @@ bot.action(/credit_(\d+)_(\d+)/, async (ctx) => {
 // (Add this button to your main menu reply_markup)
 // [Markup.button.callback('🏧 Withdraw', 'withdraw')],
 
-// Add withdraw command handler
-bot.command('withdraw', async (ctx) => {
-  try {
-    console.log(`💰 /withdraw command from user ${ctx.from.id}`);
-    const telegramId = ctx.from.id.toString();
-    const user = await User.findOne({ telegramId });
-    if (!user) {
-      await ctx.reply('❌ You need to register first!', {
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('📝 Register Now', 'register')]
-        ]).reply_markup
-      });
-      return;
-    }
-    
-    // Check if user has played at least 3 games
-    const gamesPlayed = user.gameHistory ? user.gameHistory.length : 0;
-    if (gamesPlayed < 3) {
-      await ctx.reply(
-        `❌ **Withdrawal Locked**\n\n🎮 **Games Required:** You must play at least 3 games before you can withdraw.\n\n📊 **Your Progress:**\n• Games Played: ${gamesPlayed}/3\n• Games Remaining: ${3 - gamesPlayed}\n\n💰 **Current Balance:** ${user.balance} coins\n\n🎯 **Play more games to unlock withdrawals!**`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
-            [Markup.button.callback('💰 Check Balance', 'balance')]
-          ]).reply_markup
-        }
-      );
-      return;
-    }
-    
-    // Check minimum withdrawal balance
-    if (user.balance < 50) {
-      await ctx.reply(
-        `❌ **Insufficient Balance**\n\n💰 **Current Balance:** ${user.balance} coins\n🔒 **Minimum Withdrawal:** 50 coins\n⚡ **Needed:** ${50 - user.balance} more coins\n\n💡 **To withdraw, you need:**\n• At least 50 coins in your balance\n• Have played at least 3 games ✅\n\n🎮 **Play more games or deposit to reach minimum!**`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
-            [Markup.button.callback('💰 Deposit', 'deposit')]
-          ]).reply_markup
-        }
-      );
-      return;
-    }
-    
-    // Start withdraw flow
-    ctx.session.withdrawState = 'waiting_for_method';
-    await ctx.reply(
-      `🏧 **Withdraw Flow**\n\nChoose your preferred withdrawal method:`,
-      {
-        parse_mode: 'Markdown',
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('🏦 CBE Bank', 'withdraw_cbe')],
-          [Markup.button.callback('📱 Telebirr', 'withdraw_telebirr')]
-        ]).reply_markup
-      }
-    );
-  } catch (error) {
-    console.error('❌ Error in /withdraw command:', error);
-    await ctx.reply('❌ Error processing withdrawal command. Please try again or contact support.');
-  }
-});
+// Withdraw command moved to be with other commands earlier in file
 
 // Withdraw action handler for main menu button
 bot.action('withdraw', async (ctx) => {
