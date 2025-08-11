@@ -1837,8 +1837,12 @@ bot.on('text', async (ctx) => {
     const amount = ctx.session.depositAmount;
     const paymentMethod = ctx.session.paymentMethod;
     
+    // Get user info for proper name display
+    const user = await User.findOne({ telegramId: userId });
+    const displayName = user ? (user.name || user.username || ctx.from.first_name || 'Unknown User') : (ctx.from.first_name || 'Unknown User');
+    
     // Enhanced admin notification with better formatting
-    const adminMessage = `🔔 **New Payment Verification Request**\n\n👤 **User:** @${username}\n🆔 **ID:** \`${userId}\`\n💰 **Amount:** ${amount} ETB\n🏦 **Method:** ${paymentMethod}\n📱 **Transaction Details:**\n\`\`\`\n${ctx.message.text}\n\`\`\`\n\n📋 **Action Required:**\n• Verify the payment details above\n• Click the button below to credit the user\n• User will be automatically notified when points are added`;
+    const adminMessage = `🔔 **New Payment Verification Request**\n\n👤 **User:** ${displayName}\n🆔 **ID:** \`${userId}\`\n💰 **Amount:** ${amount} ETB\n🏦 **Method:** ${paymentMethod}\n📱 **Transaction Details:**\n\`\`\`\n${ctx.message.text}\n\`\`\`\n\n📋 **Action Required:**\n• Verify the payment details above\n• Click the button below to credit the user\n• User will be automatically notified when points are added`;
 
     const creditButton = Markup.inlineKeyboard([
       [Markup.button.callback('✅ Credit User', `credit_${userId}_${amount}`)]
@@ -1939,7 +1943,8 @@ bot.on('text', async (ctx) => {
         const withdrawalId = `WD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         // Notify admin(s) with finish button
-        const adminMessage = `🔔 **New Withdrawal Request**\n\n👤 **User:** @${username || 'no_username'}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🏦 **Method:** ${ctx.session.withdrawMethod}\n📱 **Account:** ${ctx.session.withdrawAccount}\n💰 **User Balance:** ${user.balance} coins\n\nPlease review and process this withdrawal.`;
+        const displayName = user.name || user.username || ctx.from.first_name || 'Unknown User';
+        const adminMessage = `🔔 **New Withdrawal Request**\n\n👤 **User:** ${displayName}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🏦 **Method:** ${ctx.session.withdrawMethod}\n📱 **Account:** ${ctx.session.withdrawAccount}\n💰 **User Balance:** ${user.balance} coins\n\nPlease review and process this withdrawal.`;
         
         for (const agentId of PAYMENT_AGENTS) {
           try {
@@ -2850,12 +2855,13 @@ bot.action(/finish_withdrawal_(\d+)_(\d+)_(.+)/, async (ctx) => {
     }
     
     // Confirm to admin
-    await ctx.reply(`✅ **Withdrawal Completed!**\n\n👤 **User:** @${user.username || userId}\n💸 **Amount:** ${amount} ETB\n🆔 **Withdrawal ID:** ${withdrawalId}\n\n✅ User has been notified of successful payment.`, { parse_mode: 'Markdown' });
+    const displayName = user.name || user.username || `User_${userId}`;
+    await ctx.reply(`✅ **Withdrawal Completed!**\n\n👤 **User:** ${displayName}\n💸 **Amount:** ${amount} ETB\n🆔 **Withdrawal ID:** ${withdrawalId}\n\n✅ User has been notified of successful payment.`, { parse_mode: 'Markdown' });
     await ctx.answerCbQuery('✅ Withdrawal completed!');
     
     // Edit the original message to show it's completed
     try {
-      await ctx.editMessageText(`✅ **COMPLETED** - Withdrawal Request\n\n👤 **User:** @${user.username || 'no_username'}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🆔 **Withdrawal ID:** ${withdrawalId}\n\n✅ This withdrawal has been completed by @${ctx.from.username || adminId}`, { parse_mode: 'Markdown' });
+      await ctx.editMessageText(`✅ **COMPLETED** - Withdrawal Request\n\n👤 **User:** ${displayName}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🆔 **Withdrawal ID:** ${withdrawalId}\n\n✅ This withdrawal has been completed by @${ctx.from.username || adminId}`, { parse_mode: 'Markdown' });
     } catch (editError) {
       console.log('Could not edit original message:', editError.message);
     }
@@ -2929,8 +2935,9 @@ bot.action(/credit_(\d+)_(\d+)/, async (ctx) => {
       await ctx.reply(`❌ User was credited, but could NOT be notified.\nReason: ${userNotifyError?.description || userNotifyError?.message || userNotifyError}`);
     }
     // Notify admin
+    const displayName = user.name || user.username || `User_${userId}`;
     let adminMessage =
-      `✅ **User Credited!**\n\n👤 **User:** @${user.username || userId} (ID: ${user.telegramId})\n💰 **Amount:** ${amountInBirr} ETB\n🎯 **Points Added:** ${pointsToAdd} coins\n📊 **New Balance:** ${user.balance} coins\n`;
+      `✅ **User Credited!**\n\n👤 **User:** ${displayName} (ID: ${user.telegramId})\n💰 **Amount:** ${amountInBirr} ETB\n🎯 **Points Added:** ${pointsToAdd} coins\n📊 **New Balance:** ${user.balance} coins\n`;
     if (userNotified) {
       adminMessage += `\n✅ User has been notified and can now play all games.`;
     } else {
