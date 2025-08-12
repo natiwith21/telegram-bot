@@ -1299,10 +1299,9 @@ async function handleClaimLiveBingo(telegramId, message) {
     
     console.log(`🎉 Live Bingo claimed by ${telegramId} (${winnerName}) - Position: ${liveGame.winners.length}`);
     
-    // End game if this is the first winner (or implement multiple winners)
-    if (liveGame.winners.length === 1) {
-      endLiveGame(roomId, 'bingo_claimed');
-    }
+    // End game immediately when first player claims bingo
+    console.log(`🏁 Ending shared game immediately - first BINGO claimed by ${winnerName}`);
+    endLiveGame(roomId, 'bingo_claimed');
     
   } catch (error) {
     console.error('Error handling live Bingo claim:', error);
@@ -1378,10 +1377,11 @@ function endSharedGame(roomId, reason = 'completed') {
   
   console.log(`🏁 Shared game ${roomId} ended. Reason: ${reason}, Winners: ${sharedGame.winners.length}, Players: ${sharedGame.players.size}`);
   
-  // Schedule next shared game (60 seconds countdown)
+  // Schedule next shared game immediately for the same game mode
   setTimeout(() => {
+    console.log(`⏰ Creating next shared game for Bingo ${sharedGame.gameMode}`);
     createNextSharedGame(sharedGame.gameMode);
-  }, 5000); // Wait 5 seconds before creating next game
+  }, 2000); // Wait 2 seconds before creating next game
   
   // Clean up after 2 minutes
   setTimeout(() => {
@@ -1484,21 +1484,42 @@ module.exports = {
   globalGameSessions,
   liveGameSessions,
   gameScheduler,
-  startServer: () => {
+  startServer: (existingServer = null) => {
     const PORT = process.env.WS_PORT || 3002;
-    try {
-      server.listen(PORT, () => {
-        console.log(`🚀 WebSocket server running on port ${PORT}`);
-        // Initialize game scheduler
-        try {
-          initializeGameScheduler();
-          console.log('✅ WebSocket game scheduler initialized');
-        } catch (schedError) {
-          console.log('⚠️  Game scheduler initialization failed:', schedError.message);
-        }
+    
+    if (existingServer) {
+      // Use existing HTTP server in production
+      const wsServer = new (require('ws').Server)({ server: existingServer, path: '/ws' });
+      console.log(`🚀 WebSocket server attached to main server at /ws`);
+      
+      // Copy connection handlers to the new WebSocket server
+      wsServer.on('connection', (ws, request) => {
+        wss.emit('connection', ws, request);
       });
-    } catch (error) {
-      console.log('⚠️  WebSocket server failed to start:', error.message);
+      
+      try {
+        initializeGameScheduler();
+        console.log('✅ WebSocket game scheduler initialized');
+      } catch (schedError) {
+        console.log('⚠️  Game scheduler initialization failed:', schedError.message);
+      }
+      
+      return wsServer;
+    } else {
+      // Standalone server for development
+      try {
+        server.listen(PORT, () => {
+          console.log(`🚀 WebSocket server running on port ${PORT}`);
+          try {
+            initializeGameScheduler();
+            console.log('✅ WebSocket game scheduler initialized');
+          } catch (schedError) {
+            console.log('⚠️  Game scheduler initialization failed:', schedError.message);
+          }
+        });
+      } catch (error) {
+        console.log('⚠️  WebSocket server failed to start:', error.message);
+      }
     }
   }
 };

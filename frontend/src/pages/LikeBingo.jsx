@@ -138,28 +138,34 @@ const LikeBingo = () => {
           }, 3000);
           break;
 
-        // Shared multiplayer session messages
+        // Shared multiplayer session messages (ONLY for paid versions)
         case 'shared_game_created':
-          console.log('🎮 Shared game created, waiting for players...');
-          setGameState('countdown');
-          setMultiplayerCountdown(lastMessage.countdown);
-          showBalanceNotification(`🎮 Shared game created! Waiting for other players...`, 'info');
+          if (['10', '20', '50', '100'].includes(gameMode)) {
+            console.log(`🎮 Shared Bingo ${gameMode} created, waiting for players...`);
+            setGameState('countdown');
+            setMultiplayerCountdown(lastMessage.countdown);
+            showBalanceNotification(`🎮 Shared Bingo ${gameMode} created! Waiting for other players...`, 'info');
+          }
           break;
 
         case 'joined_shared_waiting':
-          console.log('🎮 Joined shared game waiting room');
-          setGameState('countdown');
-          setMultiplayerCountdown(lastMessage.countdown);
-          showBalanceNotification(`🎮 Joined shared game! ${lastMessage.playersCount} players waiting...`, 'info');
+          if (['10', '20', '50', '100'].includes(gameMode)) {
+            console.log(`🎮 Joined shared Bingo ${gameMode} waiting room`);
+            setGameState('countdown');
+            setMultiplayerCountdown(lastMessage.countdown);
+            showBalanceNotification(`🎮 Joined shared Bingo ${gameMode}! ${lastMessage.playersCount} players waiting...`, 'info');
+          }
           break;
 
         case 'joined_shared_mid_game':
-          console.log('🎯 Joined shared game in progress');
-          setGameState('finished'); // Show waiting for next game
-          setMultiplayerCountdown(lastMessage.nextGameCountdown);
-          setDrawnNumbers(lastMessage.calledNumbers || []);
-          setCurrentCall(lastMessage.currentCall);
-          showBalanceNotification(`⏰ Game in progress! Next game starts in ${lastMessage.nextGameCountdown}s`, 'info');
+          if (['10', '20', '50', '100'].includes(gameMode)) {
+            console.log(`🎯 Joined shared Bingo ${gameMode} in progress`);
+            setGameState('finished'); // Show waiting for next game
+            setMultiplayerCountdown(lastMessage.nextGameCountdown);
+            setDrawnNumbers(lastMessage.calledNumbers || []);
+            setCurrentCall(lastMessage.currentCall);
+            showBalanceNotification(`⏰ Bingo ${gameMode} in progress! Next game starts in ${lastMessage.nextGameCountdown}s`, 'info');
+          }
           break;
 
         case 'player_joined_shared_waiting':
@@ -533,8 +539,11 @@ const LikeBingo = () => {
         }
       }
 
-      // Send shared multiplayer game start request via WebSocket
-      if (isConnected) {
+      // Send shared multiplayer game start request via WebSocket (ONLY for paid versions)
+      const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
+      
+      if (isConnected && isPaidVersion) {
+        console.log(`🌐 Starting shared multiplayer Bingo ${gameMode}`);
         sendMessage({
           type: 'start_multiplayer_game',
           telegramId,
@@ -544,11 +553,8 @@ const LikeBingo = () => {
           gameMode
         });
         
-        // For paid games, don't deduct balance yet - wait for game result
-        if (gameMode !== 'demo') {
-          console.log('🎮 Starting shared multiplayer game - balance will be updated on game end only');
-          showBalanceNotification(`🎮 Starting shared game! Stake: ${stake} coins at risk`, 'info');
-        }
+        console.log('🎮 Starting shared multiplayer game - balance will be updated on game end only');
+        showBalanceNotification(`🎮 Starting shared Bingo ${gameMode}! Stake: ${stake} coins at risk`, 'info');
         setGameNumber(prev => prev + 1);
         // Don't set game state here - wait for WebSocket response
         setIsLoading(false);
@@ -612,9 +618,11 @@ const LikeBingo = () => {
   };
 
   const startDrawing = () => {
-    // Check if we're in shared multiplayer mode
-    if (isConnected && gameMode !== 'demo') {
-      console.log('🌐 Shared multiplayer mode - numbers will come via WebSocket');
+    // Check if we're in shared multiplayer mode (ONLY for paid versions: 10,20,50,100)
+    const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
+    
+    if (isConnected && isPaidVersion) {
+      console.log(`🌐 Shared multiplayer mode for Bingo ${gameMode} - numbers will come via WebSocket`);
       setGameState('playing');
       setDrawnNumbers([]);
       setCurrentCall(null);
@@ -623,7 +631,7 @@ const LikeBingo = () => {
     }
     
     // Local drawing for demo mode or when WebSocket is not connected
-    console.log('🎮 Starting local drawing (demo/fallback mode)');
+    console.log(`🎮 Starting local drawing (${gameMode === 'demo' ? 'demo' : 'fallback'} mode)`);
     startLocalDrawing();
   };
 
@@ -753,8 +761,11 @@ const LikeBingo = () => {
     }
     
     // Send Bingo claim via WebSocket
-    if (isConnected && gameMode !== 'demo') {
-      // For shared multiplayer games, use shared bingo claim
+    const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
+    
+    if (isConnected && isPaidVersion) {
+      // For shared multiplayer games (paid versions only), use shared bingo claim
+      console.log(`🎯 Claiming BINGO in shared Bingo ${gameMode} game`);
       sendMessage({
         type: 'claim_live_bingo',
         telegramId,
@@ -762,7 +773,8 @@ const LikeBingo = () => {
         winPattern: 'line' // Could be enhanced to detect actual pattern
       });
     } else {
-      // Fallback for local games
+      // Fallback for local games (demo or no WebSocket)
+      console.log(`🎯 Claiming BINGO in local ${gameMode} game`);
       sendMessage({
         type: 'claim_bingo',
         telegramId,
@@ -1457,7 +1469,7 @@ const LikeBingo = () => {
                       whileTap={{ scale: 0.98 }}
                     >
                       {isLoading ? 'Starting...' : 
-                       isConnected && gameMode !== 'demo' ? 'Join Shared Game' : 'Start Live Game'}
+                       isConnected && ['10', '20', '50', '100'].includes(gameMode) ? 'Join Shared Game' : 'Start Live Game'}
                     </motion.button>
                   </div>
                 </>
@@ -1613,8 +1625,8 @@ const LikeBingo = () => {
                   <div style={styles.controlPanel}>
                     <div style={styles.controlTitle}>Count Down</div>
                     <div style={styles.controlValue}>
-                      {multiplayerCountdown !== null ? multiplayerCountdown : 
-                       countdown > 0 ? countdown : '-'}
+                    {multiplayerCountdown !== null && multiplayerCountdown > 0 ? multiplayerCountdown : 
+                    countdown > 0 ? countdown : '-'}
                     </div>
                   </div>
 

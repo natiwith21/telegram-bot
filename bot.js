@@ -3491,6 +3491,8 @@ async function startBot() {
       console.error('❌ Failed to register webhook callback:', error);
     }
     
+
+    
   } else {
     // Use polling for development with retry logic
     console.log('🔧 Starting bot in polling mode (development)...');
@@ -3576,7 +3578,13 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     if (wsServer && wsServer.startServer) {
       try {
         console.log('🔌 Starting WebSocket server...');
-        wsServer.startServer();
+        if (process.env.NODE_ENV === 'production') {
+          // In production, attach to main server
+          wsServer.startServer(server);
+        } else {
+          // In development, use standalone server
+          wsServer.startServer();
+        }
         console.log('✅ WebSocket server started successfully');
       } catch (wsError) {
         console.log('⚠️  WebSocket server failed to start:', wsError.message);
