@@ -128,20 +128,14 @@ process.on('warning', (warning) => {
 // Import WebSocket functions (optional - real-time features)
 let wsServer = null;
 try {
-  // Only try to load WebSocket server if it exists
-  if (require('fs').existsSync('./websocket-server.js')) {
+  // Only try to load WebSocket server if it exists and environment is set up
+  if (require('fs').existsSync('./websocket-server.js') && process.env.MONGODB_URI) {
     wsServer = require('./websocket-server');
-    console.log('✅ WebSocket integration loaded');
+    console.log('✅ WebSocket integration loaded (will start later)');
     
-    // Add error handling for WebSocket to prevent crashes
-    if (wsServer && wsServer.on) {
-      wsServer.on('error', (error) => {
-        console.error('🔌 WebSocket server error:', error.message);
-        console.error('⚠️  WebSocket error handled - server continuing');
-      });
-    }
+    // Don't start WebSocket server immediately - wait for bot to be ready
   } else {
-    console.log('⚠️  WebSocket server not found - real-time features disabled');
+    console.log('⚠️  WebSocket server disabled - missing file or database config');
   }
 } catch (error) {
   console.log('⚠️  WebSocket server not available - real-time features disabled');
@@ -3577,6 +3571,18 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     console.log(`📊 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
     console.log(`⏰ Started at: ${new Date().toISOString()}`);
     console.log(`🎯 Bot is ready to handle requests!`);
+    
+    // Start WebSocket server after everything else is ready
+    if (wsServer && wsServer.startServer) {
+      try {
+        console.log('🔌 Starting WebSocket server...');
+        wsServer.startServer();
+        console.log('✅ WebSocket server started successfully');
+      } catch (wsError) {
+        console.log('⚠️  WebSocket server failed to start:', wsError.message);
+        console.log('   Bot will continue without real-time features');
+      }
+    }
     
   } catch (healthError) {
     console.error('🚨 Startup health check failed:', healthError.message);

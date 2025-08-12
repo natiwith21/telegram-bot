@@ -15,11 +15,16 @@ try {
   console.log('   WebSocket server will run with limited functionality');
 }
 
-// Connect to database (if available)
-if (connectDB) {
-  connectDB();
+// Connect to database (if available and not already connected)
+if (connectDB && process.env.MONGODB_URI) {
+  try {
+    connectDB();
+    console.log('🔗 WebSocket server connecting to database...');
+  } catch (error) {
+    console.log('⚠️  WebSocket database connection failed:', error.message);
+  }
 } else {
-  console.log('⚠️  Database connection not available');
+  console.log('⚠️  Database connection not available for WebSocket server');
 }
 
 // Create HTTP server
@@ -1389,8 +1394,15 @@ function endSharedGame(roomId, reason = 'completed') {
 
 // Create next shared game session
 function createNextSharedGame(gameMode) {
-  const gameId = `shared_${gameMode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}_shared`;
+  
+  // Check if next game already exists
+  if (liveGameSessions.has(roomId)) {
+    console.log(`⚠️  Next shared game for ${gameMode} already exists`);
+    return;
+  }
+  
+  const gameId = `shared_${gameMode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const startTime = Date.now() + 60000; // 60 seconds countdown for next game
   
   const nextSharedGame = {
@@ -1474,10 +1486,19 @@ module.exports = {
   gameScheduler,
   startServer: () => {
     const PORT = process.env.WS_PORT || 3002;
-    server.listen(PORT, () => {
-      console.log(`🚀 WebSocket server running on port ${PORT}`);
-      // Initialize game scheduler
-      initializeGameScheduler();
-    });
+    try {
+      server.listen(PORT, () => {
+        console.log(`🚀 WebSocket server running on port ${PORT}`);
+        // Initialize game scheduler
+        try {
+          initializeGameScheduler();
+          console.log('✅ WebSocket game scheduler initialized');
+        } catch (schedError) {
+          console.log('⚠️  Game scheduler initialization failed:', schedError.message);
+        }
+      });
+    } catch (error) {
+      console.log('⚠️  WebSocket server failed to start:', error.message);
+    }
   }
 };
