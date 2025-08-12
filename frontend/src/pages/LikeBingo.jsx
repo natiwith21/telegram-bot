@@ -169,10 +169,9 @@ const LikeBingo = () => {
           break;
 
         case 'player_joined_shared_waiting':
-          if (lastMessage.telegramId !== telegramId) {
-            console.log(`👥 Player ${lastMessage.telegramId} joined shared waiting room`);
-            setMultiplayerCountdown(lastMessage.countdown);
-          }
+          // Update countdown for all players to stay synchronized
+          console.log(`👥 Player joined - updating countdown to ${lastMessage.countdown}`);
+          setMultiplayerCountdown(lastMessage.countdown);
           break;
 
         case 'shared_game_countdown':
@@ -1496,9 +1495,10 @@ const LikeBingo = () => {
                   <div style={styles.controlPanel}>
                     <div style={styles.controlTitle}>Count Down</div>
                     <div style={styles.controlValue}>
-                    {multiplayerCountdown !== null && multiplayerCountdown > 0 ? multiplayerCountdown : 
+                    {multiplayerCountdown === 'wait' ? 'wait' :
+                     multiplayerCountdown !== null && multiplayerCountdown > 0 ? multiplayerCountdown : 
                     countdown > 0 ? countdown : '-'}
-                    </div>
+                     </div>
                   </div>
 
                   {/* Current Call */}

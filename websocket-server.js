@@ -376,9 +376,9 @@ async function handleStartMultiplayerGame(telegramId, message) {
           stake: stake
         });
         
-        const countdown = Math.ceil((sharedGame.startTime - Date.now()) / 1000);
+        const countdown = Math.max(0, Math.ceil((sharedGame.startTime - Date.now()) / 1000));
         
-        // Notify all players about new player joining
+        // Notify all players about new player joining with SYNCHRONIZED countdown
         broadcastToLiveGame(sharedGame.roomId, {
           type: 'player_joined_shared_waiting',
           telegramId: telegramId,
@@ -416,7 +416,7 @@ async function handleStartMultiplayerGame(telegramId, message) {
           calledNumbers: sharedGame.calledNumbers,
           currentCall: sharedGame.currentCall,
           playersCount: sharedGame.players.size,
-          nextGameCountdown: nextGameCountdown
+          nextGameCountdown: 'wait' // Show "wait" for late joiners
         });
         
         // Notify other players
@@ -461,14 +461,15 @@ async function handleStartMultiplayerGame(telegramId, message) {
       }
       gameRooms.get(newRoomId).add(telegramId);
       
-      // Start countdown timer
+      // Start countdown timer with proper synchronization
       const countdownTimer = setInterval(() => {
-        const timeLeft = Math.ceil((startTime - Date.now()) / 1000);
+        const timeLeft = Math.max(0, Math.ceil((startTime - Date.now()) / 1000));
         
         if (timeLeft <= 0) {
           clearInterval(countdownTimer);
           startSharedGamePlay(newRoomId);
         } else {
+          // Broadcast synchronized countdown to ALL players
           broadcastToLiveGame(newRoomId, {
             type: 'shared_game_countdown',
             countdown: timeLeft,
@@ -1451,18 +1452,35 @@ function createNextSharedGame(gameMode) {
   console.log(`⏰ Next shared game ${gameId} scheduled for mode ${gameMode} in 60 seconds`);
 }
 
-// Broadcast to all players in live game
+// Broadcast to all players in live game with error handling
 function broadcastToLiveGame(roomId, message, excludeUsers = []) {
   if (!gameRooms.has(roomId)) return;
   
+  let broadcastCount = 0;
   gameRooms.get(roomId).forEach(telegramId => {
     if (excludeUsers.includes(telegramId)) return;
     
     const connection = connections.get(telegramId);
     if (connection && connection.ws.readyState === WebSocket.OPEN) {
-      connection.ws.send(JSON.stringify(message));
+      try {
+        connection.ws.send(JSON.stringify(message));
+        broadcastCount++;
+      } catch (error) {
+        console.error(`Failed to send message to user ${telegramId}:`, error.message);
+        // Remove dead connection
+        connections.delete(telegramId);
+        gameRooms.get(roomId).delete(telegramId);
+      }
+    } else {
+      // Clean up dead connection
+      if (connection) {
+        connections.delete(telegramId);
+      }
+      gameRooms.get(roomId).delete(telegramId);
     }
   });
+  
+  console.log(`📡 Broadcasted to ${broadcastCount} players in room ${roomId}`);
 }
 
 // Export functions for external use
