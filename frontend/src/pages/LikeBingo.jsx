@@ -142,7 +142,8 @@ const LikeBingo = () => {
         case 'shared_game_created':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Shared Bingo ${gameMode} created, waiting for players...`);
-            // Set countdown for existing Count Down UI only
+            // Go to playing state immediately and show countdown in Count Down section
+            setGameState('playing');
             setMultiplayerCountdown(lastMessage.countdown);
           }
           break;
@@ -150,7 +151,8 @@ const LikeBingo = () => {
         case 'joined_shared_waiting':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Joined shared Bingo ${gameMode} waiting room`);
-            // Set countdown for existing Count Down UI only
+            // Go to playing state immediately and show countdown in Count Down section
+            setGameState('playing');
             setMultiplayerCountdown(lastMessage.countdown);
           }
           break;
@@ -158,7 +160,8 @@ const LikeBingo = () => {
         case 'joined_shared_mid_game':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎯 Joined shared Bingo ${gameMode} in progress`);
-            // Set countdown for existing Count Down UI only
+            // Go to playing state and show next game countdown in Count Down section
+            setGameState('playing');
             setMultiplayerCountdown(lastMessage.nextGameCountdown);
             setDrawnNumbers(lastMessage.calledNumbers || []);
             setCurrentCall(lastMessage.currentCall);
