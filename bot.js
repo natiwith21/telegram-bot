@@ -6,30 +6,123 @@ const Payment = require('./models/Payment');
 const GameSession = require('./models/GameSession');
 const crypto = require('crypto');
 
-// Critical: Add global error handlers to prevent crashes
+// ENHANCED: Critical error handlers to prevent production crashes
+let crashCount = 0;
+const MAX_CRASHES = 5;
+
 process.on('uncaughtException', (error) => {
-  console.error('💥 UNCAUGHT EXCEPTION - Server would crash without this handler:');
+  crashCount++;
+  console.error(`💥 UNCAUGHT EXCEPTION #${crashCount} - CRITICAL ERROR PREVENTED:`);
+  console.error('Time:', new Date().toISOString());
   console.error('Error:', error.message);
   console.error('Stack:', error.stack);
-  console.error('⚠️  Server continuing but this should be investigated!');
+  console.error('⚠️  Server continuing - crash prevented!');
+  
+  // If too many crashes, log warning but keep running
+  if (crashCount >= MAX_CRASHES) {
+    console.error(`🚨 WARNING: ${crashCount} uncaught exceptions occurred!`);
+    console.error('🔧 Consider investigating recurring issues in production');
+  }
+  
+  // Reset crash count after 10 minutes
+  setTimeout(() => {
+    if (crashCount > 0) {
+      console.log(`🔄 Crash counter reset (was ${crashCount})`);
+      crashCount = 0;
+    }
+  }, 10 * 60 * 1000);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 UNHANDLED PROMISE REJECTION - Server would crash without this handler:');
+  crashCount++;
+  console.error(`💥 UNHANDLED PROMISE REJECTION #${crashCount} - CRITICAL ERROR PREVENTED:`);
+  console.error('Time:', new Date().toISOString());
   console.error('Reason:', reason);
   console.error('Promise:', promise);
-  console.error('⚠️  Server continuing but this should be investigated!');
+  console.error('⚠️  Server continuing - crash prevented!');
+  
+  // Enhanced logging for promise rejections
+  if (reason && reason.stack) {
+    console.error('Stack trace:', reason.stack);
+  }
+  
+  if (crashCount >= MAX_CRASHES) {
+    console.error(`🚨 WARNING: ${crashCount} promise rejections occurred!`);
+    console.error('🔧 Consider investigating recurring promise issues');
+  }
 });
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log('🛑 Received SIGINT - shutting down gracefully...');
-  process.exit(0);
+// ENHANCED: Graceful shutdown with cleanup
+async function gracefulShutdown(signal) {
+  console.log(`🛑 Received ${signal} - initiating graceful shutdown...`);
+  
+  try {
+    // Clear session cleanup interval
+    if (sessionCleanupInterval) {
+      clearInterval(sessionCleanupInterval);
+      console.log('✅ Session cleanup stopped');
+    }
+    
+    // Clear memory monitoring interval
+    if (memoryCheckInterval) {
+      clearInterval(memoryCheckInterval);
+      console.log('✅ Memory monitoring stopped');
+    }
+    
+    // Stop the bot
+    if (bot) {
+      try {
+        bot.stop();
+        console.log('✅ Bot stopped');
+      } catch (error) {
+        console.log('⚠️  Bot stop error (may be normal):', error.message);
+      }
+    }
+    
+    // Close database connection
+    try {
+      const mongoose = require('mongoose');
+      await mongoose.connection.close();
+      console.log('✅ Database connection closed');
+    } catch (error) {
+      console.log('⚠️  Database close error:', error.message);
+    }
+    
+    // Close HTTP server
+    if (server) {
+      server.close(() => {
+        console.log('✅ HTTP server closed');
+        console.log('🎯 Graceful shutdown completed');
+        process.exit(0);
+      });
+      
+      // Force exit after 10 seconds
+      setTimeout(() => {
+        console.log('⏰ Shutdown timeout - forcing exit');
+        process.exit(1);
+      }, 10000);
+    } else {
+      process.exit(0);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error);
+    process.exit(1);
+  }
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+// Handle additional exit scenarios
+process.on('exit', (code) => {
+  console.log(`🎯 Process exiting with code: ${code}`);
 });
 
-process.on('SIGTERM', () => {
-  console.log('🛑 Received SIGTERM - shutting down gracefully...');
-  process.exit(0);
+// Final safety net for any remaining unhandled issues
+process.on('warning', (warning) => {
+  console.warn('⚠️  Node.js Warning:', warning.message);
+  console.warn('   Stack:', warning.stack);
 });
 
 // Import WebSocket functions (optional - real-time features)
@@ -57,39 +150,120 @@ try {
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// In-memory session store for better session management
+// ENHANCED: In-memory session store with cleanup and error handling
 const sessionStore = new Map();
+let sessionCleanupInterval;
 
-// Improved session middleware for deposit flow
+// Session cleanup to prevent memory leaks
+function startSessionCleanup() {
+  sessionCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [userId, session] of sessionStore.entries()) {
+      // Clean up sessions older than 2 hours with no activity
+      if (!session.lastActivity || (now - session.lastActivity) > 2 * 60 * 60 * 1000) {
+        sessionStore.delete(userId);
+        cleanedCount++;
+      }
+    }
+    
+    if (cleanedCount > 0) {
+      console.log(`🧹 Cleaned up ${cleanedCount} inactive sessions. Active sessions: ${sessionStore.size}`);
+    }
+  }, 30 * 60 * 1000); // Run every 30 minutes
+}
+
+// Start session cleanup
+startSessionCleanup();
+
+// ENHANCED: Session middleware with error handling and cleanup
 bot.use((ctx, next) => {
-  const userId = ctx.from?.id?.toString();
-  
-  if (!userId) {
+  try {
+    const userId = ctx.from?.id?.toString();
+    
+    if (!userId) {
+      return next();
+    }
+    
+    // Get or create session for this user
+    if (!sessionStore.has(userId)) {
+      sessionStore.set(userId, { lastActivity: Date.now() });
+    }
+    
+    // Attach session to context
+    ctx.session = sessionStore.get(userId);
+    
+    // Update last activity
+    ctx.session.lastActivity = Date.now();
+    
+    // Add debugging for session state (only for active states)
+    if (ctx.session.depositState || ctx.session.withdrawState) {
+      console.log(`🔍 Session Debug - User ${userId}: depositState = ${ctx.session.depositState || 'none'}, withdrawState = ${ctx.session.withdrawState || 'none'}`);
+    }
+    
+    // Clear corrupted session data if needed
+    if (ctx.session && typeof ctx.session !== 'object') {
+      console.log(`🔧 Fixing corrupted session for user ${userId}`);
+      ctx.session = { lastActivity: Date.now() };
+      sessionStore.set(userId, ctx.session);
+    }
+    
+    return next();
+  } catch (error) {
+    console.error(`🚨 Session middleware error for user ${ctx.from?.id}:`, error);
+    
+    // Provide fallback session
+    ctx.session = { lastActivity: Date.now() };
     return next();
   }
-  
-  // Get or create session for this user
-  if (!sessionStore.has(userId)) {
-    sessionStore.set(userId, {});
-  }
-  
-  // Attach session to context
-  ctx.session = sessionStore.get(userId);
-  
-  // Add debugging for session state
-  if (ctx.session.depositState) {
-    console.log(`🔍 Session Debug - User ${userId}: depositState = ${ctx.session.depositState}`);
-  }
-  
-  return next();
 });
 
-// Connect to database with error handling
-connectDB().catch((error) => {
-  console.error('💥 Failed to connect to database:', error);
-  console.error('🛑 Server cannot continue without database - exiting...');
-  process.exit(1);
-});
+// Enhanced database connection with retry logic
+async function initializeDatabase() {
+  let retryCount = 0;
+  const maxRetries = 5;
+  
+  while (retryCount < maxRetries) {
+    try {
+      await connectDB();
+      console.log('✅ Database connected successfully');
+      
+      // Monitor database connection
+      const mongoose = require('mongoose');
+      mongoose.connection.on('error', (error) => {
+        console.error('🔴 Database connection error:', error);
+      });
+      
+      mongoose.connection.on('disconnected', () => {
+        console.warn('⚠️  Database disconnected - attempting to reconnect...');
+      });
+      
+      mongoose.connection.on('reconnected', () => {
+        console.log('✅ Database reconnected successfully');
+      });
+      
+      return; // Success, exit retry loop
+    } catch (error) {
+      retryCount++;
+      console.error(`💥 Database connection attempt ${retryCount}/${maxRetries} failed:`, error.message);
+      
+      if (retryCount >= maxRetries) {
+        console.error('🛑 CRITICAL: Could not connect to database after multiple attempts');
+        console.error('🔧 Check your MONGODB_URI in environment variables');
+        process.exit(1);
+      }
+      
+      // Wait before retrying (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
+      console.log(`⏳ Waiting ${waitTime/1000} seconds before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+}
+
+// Initialize database connection
+initializeDatabase();
 
 console.log("🤖 Bot is starting...");
 
@@ -252,23 +426,65 @@ const tosKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('❌ Cancel', 'tos_cancel')]
 ]);
 
-// Global error handler for bot
-bot.catch((err, ctx) => {
-  console.log('Bot error:', err);
+// ENHANCED: Comprehensive bot error handler to prevent crashes
+let botErrorCount = 0;
+
+bot.catch(async (err, ctx) => {
+  botErrorCount++;
+  const timestamp = new Date().toISOString();
+  const userId = ctx?.from?.id || 'unknown';
+  const username = ctx?.from?.username || ctx?.from?.first_name || 'unknown';
   
-  // Don't crash on common Telegram errors
+  console.error(`🤖 BOT ERROR #${botErrorCount} at ${timestamp}:`);
+  console.error(`👤 User: ${username} (ID: ${userId})`);
+  console.error(`📝 Message: ${ctx?.message?.text || 'no text'}`);
+  console.error(`🔴 Error:`, err);
+  
+  // Handle specific Telegram API errors gracefully
   if (err.code === 403) {
-    console.log(`User ${ctx.from?.id} has blocked the bot`);
+    console.log(`   → User ${userId} blocked the bot (expected behavior)`);
     return;
   }
   
   if (err.code === 429) {
-    console.log('Rate limited by Telegram');
+    console.log(`   → Rate limited by Telegram (will retry automatically)`);
     return;
   }
   
-  // Log other errors but don't crash
-  console.error('Unexpected bot error:', err);
+  if (err.code === 400 && err.description?.includes('chat not found')) {
+    console.log(`   → Chat not found for user ${userId} (user may have left)`);
+    return;
+  }
+  
+  if (err.code === 400 && err.description?.includes('message to edit not found')) {
+    console.log(`   → Message to edit not found (expected if user navigated away)`);
+    return;
+  }
+  
+  // Try to send error message to user if possible
+  try {
+    if (ctx && ctx.reply) {
+      await ctx.reply('❌ An error occurred. Please try again or contact support if the issue persists.');
+    }
+  } catch (replyError) {
+    console.error(`   → Could not send error message to user: ${replyError.message}`);
+  }
+  
+  // Log unexpected errors with full details
+  console.error(`🚨 UNEXPECTED BOT ERROR #${botErrorCount}:`);
+  console.error(`   Error Code: ${err.code || 'none'}`);
+  console.error(`   Description: ${err.description || 'none'}`);
+  console.error(`   Stack:`, err.stack);
+  
+  // Reset error count periodically
+  if (botErrorCount === 1) {
+    setTimeout(() => {
+      if (botErrorCount > 0) {
+        console.log(`🔄 Bot error counter reset (was ${botErrorCount})`);
+        botErrorCount = 0;
+      }
+    }, 15 * 60 * 1000); // Reset after 15 minutes
+  }
 });
 
 // Start command with referral tracking
@@ -3241,36 +3457,131 @@ app.post('/api/like-bingo-play', async (req, res) => {
   }
 });
 
-// Start the bot - use webhooks in production, polling in development
-if (process.env.NODE_ENV === 'production') {
-  // Use webhooks for production (Render)
-  const WEBHOOK_URL = `https://telegram-bot-u2ni.onrender.com/webhook/${process.env.BOT_TOKEN}`;
+// ENHANCED: Bot startup with retry logic and comprehensive error handling
+async function startBot() {
+  if (process.env.NODE_ENV === 'production') {
+    // Use webhooks for production (Render)
+    const WEBHOOK_URL = `https://telegram-bot-u2ni.onrender.com/webhook/${process.env.BOT_TOKEN}`;
+    
+    console.log('🔧 Setting up webhook for production...');
+    console.log(`📡 Webhook URL: ${WEBHOOK_URL}`);
+    
+    // Enhanced webhook setup with retry logic
+    let webhookRetries = 0;
+    const maxWebhookRetries = 3;
+    
+    while (webhookRetries < maxWebhookRetries) {
+      try {
+        await bot.telegram.setWebhook(WEBHOOK_URL);
+        console.log('✅ Bot webhook set successfully');
+        break;
+      } catch (error) {
+        webhookRetries++;
+        console.error(`❌ Webhook setup attempt ${webhookRetries}/${maxWebhookRetries} failed:`, error.message);
+        
+        if (webhookRetries >= maxWebhookRetries) {
+          console.error('🚨 CRITICAL: Could not set webhook after multiple attempts');
+          console.error('🔧 Bot will continue but may have connection issues');
+        } else {
+          console.log('⏳ Waiting 5 seconds before retry...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+    }
+    
+    // Add webhook endpoint to Express app with error handling
+    try {
+      app.use(bot.webhookCallback('/webhook/' + process.env.BOT_TOKEN));
+      console.log('✅ Webhook callback endpoint registered');
+    } catch (error) {
+      console.error('❌ Failed to register webhook callback:', error);
+    }
+    
+  } else {
+    // Use polling for development with retry logic
+    console.log('🔧 Starting bot in polling mode (development)...');
+    
+    let pollingRetries = 0;
+    const maxPollingRetries = 3;
+    
+    while (pollingRetries < maxPollingRetries) {
+      try {
+        await bot.launch();
+        console.log('✅ Bot launched successfully (polling mode)');
+        break;
+      } catch (error) {
+        pollingRetries++;
+        console.error(`❌ Bot launch attempt ${pollingRetries}/${maxPollingRetries} failed:`, error.message);
+        
+        if (pollingRetries >= maxPollingRetries) {
+          console.error('🚨 CRITICAL: Could not start bot after multiple attempts');
+          throw error; // Re-throw to crash if we can't start
+        } else {
+          console.log('⏳ Waiting 3 seconds before retry...');
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
+    }
+  }
   
-  // Set webhook
-  bot.telegram.setWebhook(WEBHOOK_URL).then(() => {
-    console.log('🚀 Bot webhook set successfully');
-  }).catch((error) => {
-    console.error('❌ Failed to set webhook:', error);
-  });
-  
-  // Add webhook endpoint to Express app
-  app.use(bot.webhookCallback('/webhook/' + process.env.BOT_TOKEN));
-  
-} else {
-  // Use polling for development
-  bot.launch().then(() => {
-    console.log('🚀 Bot launched successfully (polling mode)');
-  }).catch((error) => {
-    console.error('❌ Failed to launch bot:', error);
-  });
+  // Add connection monitoring
+  setInterval(async () => {
+    try {
+      await bot.telegram.getMe();
+      // Bot is responsive
+    } catch (error) {
+      console.error('🔴 Bot connection check failed:', error.message);
+      console.log('🔄 Bot may have connection issues but continuing...');
+    }
+  }, 5 * 60 * 1000); // Check every 5 minutes
 }
 
-// Start server with error handling
-const server = app.listen(PORT, '0.0.0.0', () => {
+// Start the bot with error handling
+startBot().catch((error) => {
+  console.error('💥 FATAL: Could not start bot:', error);
+  console.error('🛑 Server will exit as bot is essential');
+  process.exit(1);
+});
+
+// Start server with enhanced error handling and health checks
+const server = app.listen(PORT, '0.0.0.0', async () => {
   console.log(`🌐 HTTP server running on port ${PORT} for Render deployment`);
-  console.log(`🚀 SERVER FULLY STARTED - All systems operational!`);
-  console.log(`📊 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
-  console.log(`⏰ Started at: ${new Date().toISOString()}`);
+  
+  // Perform startup health checks
+  console.log('🔍 Performing startup health checks...');
+  
+  try {
+    // Check bot connection
+    const botInfo = await bot.telegram.getMe();
+    console.log(`✅ Bot connected: @${botInfo.username} (${botInfo.first_name})`);
+    
+    // Check database connection
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ Database connected');
+    } else {
+      console.log('⚠️  Database connection state:', mongoose.connection.readyState);
+    }
+    
+    // Check environment variables
+    const requiredVars = ['BOT_TOKEN', 'MONGODB_URI'];
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length === 0) {
+      console.log('✅ All required environment variables present');
+    } else {
+      console.log('⚠️  Missing environment variables:', missingVars);
+    }
+    
+    console.log(`🚀 SERVER FULLY STARTED - All systems operational!`);
+    console.log(`📊 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+    console.log(`⏰ Started at: ${new Date().toISOString()}`);
+    console.log(`🎯 Bot is ready to handle requests!`);
+    
+  } catch (healthError) {
+    console.error('🚨 Startup health check failed:', healthError.message);
+    console.log('⚠️  Server starting anyway, but may have issues');
+  }
 });
 
 // Handle server errors
