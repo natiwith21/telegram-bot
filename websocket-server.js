@@ -36,12 +36,21 @@ const countdownIntervals = new Map(); // Track countdown intervals
 
 // Global synchronized game sessions
 const globalGameSessions = new Map(); // Track global game sessions
+const liveGameSessions = new Map(); // Track live shared game sessions (immediate start)
 const gameScheduler = {
   nextGameTime: null,
   currentGame: null,
   gameInterval: 5 * 60 * 1000, // 5 minutes between games
   gameTimer: null,
   countdownTimer: null
+};
+
+// Live game configuration
+const LIVE_GAME_CONFIG = {
+  waitTime: 30000, // 30 seconds wait for players before starting
+  numberCallInterval: 3000, // 3 seconds between number calls
+  maxNumbers: 75, // Maximum numbers to call (1-75 for Bingo)
+  roomPrefix: 'live_like_bingo_'
 };
 
 // Connection handler
@@ -158,6 +167,18 @@ async function handleMessage(ws, telegramId, message) {
       
     case 'global_game_win':
       await handleGlobalGameWin(telegramId, message.gameId, message.winPattern);
+      break;
+      
+    case 'start_live_game':
+      await handleStartLiveGame(ws, telegramId, message);
+      break;
+      
+    case 'join_live_game':
+      await handleJoinLiveGame(ws, telegramId, message);
+      break;
+      
+    case 'claim_live_bingo':
+      await handleClaimLiveBingo(telegramId, message);
       break;
       
     default:
@@ -319,51 +340,157 @@ function notifyAdminsNewPayment(paymentData) {
 
 // Handle multiplayer game start
 async function handleStartMultiplayerGame(telegramId, message) {
-  const { roomId = 'like-bingo-room', selectedNumbers, stake, token } = message;
+  const { roomId = 'like-bingo-room', selectedNumbers, stake, token, gameMode } = message;
   
   try {
+    console.log(`🎮 ${telegramId} starting/joining shared multiplayer game in room ${roomId}`);
+    
     // Add player to room if not already there
     if (!gameRooms.has(roomId)) {
       gameRooms.set(roomId, new Set());
     }
     gameRooms.get(roomId).add(telegramId);
     
-    // Check if game is already running for this room
-    if (countdownIntervals.has(roomId)) {
-      // Game already running, just acknowledge
-      sendToUser(telegramId, {
-        type: 'game_join_success',
-        message: 'Joined existing game'
-      });
-      return;
+    // Check if there's already an active shared game session
+    let sharedGame = null;
+    for (const [sessionRoomId, session] of liveGameSessions.entries()) {
+      if (sessionRoomId.includes(gameMode) && (session.state === 'waiting' || session.state === 'playing')) {
+        sharedGame = session;
+        break;
+      }
     }
     
-    // Start game immediately (no countdown)
-    // Notify all players in room that game is starting
-    broadcastToRoom(roomId, {
-      type: 'game_start',
-      playersCount: gameRooms.get(roomId).size
-    });
-    
-    // Start game timer (5 minutes) - but game will end when 20 numbers are called
-    setTimeout(() => {
-      broadcastToRoom(roomId, {
-        type: 'game_end',
-        message: 'Game time expired'
+    if (sharedGame) {
+      // Join existing shared game session
+      if (sharedGame.state === 'waiting') {
+        // Game is in waiting state - join the waiting room
+        sharedGame.players.set(telegramId, {
+          selectedNumbers: selectedNumbers || [],
+          markedNumbers: new Set(),
+          hasWon: false,
+          stake: stake
+        });
+        
+        const countdown = Math.ceil((sharedGame.startTime - Date.now()) / 1000);
+        
+        // Notify all players about new player joining
+        broadcastToLiveGame(sharedGame.roomId, {
+          type: 'player_joined_shared_waiting',
+          telegramId: telegramId,
+          playersCount: sharedGame.players.size,
+          countdown: countdown
+        });
+        
+        sendToUser(telegramId, {
+          type: 'joined_shared_waiting',
+          gameId: sharedGame.id,
+          roomId: sharedGame.roomId,
+          countdown: countdown,
+          playersCount: sharedGame.players.size
+        });
+        
+      } else if (sharedGame.state === 'playing') {
+        // Game is already running - join mid-game
+        sharedGame.players.set(telegramId, {
+          selectedNumbers: selectedNumbers || [],
+          markedNumbers: new Set(),
+          hasWon: false,
+          stake: stake
+        });
+        
+        // Calculate next game countdown (estimate time until current game ends)
+        const estimatedGameDuration = 20 * 3000; // 20 numbers * 3 seconds each
+        const gameElapsed = Date.now() - (sharedGame.startTime - 30000); // Subtract waiting time
+        const nextGameTime = Math.max(0, estimatedGameDuration - gameElapsed) + 60000; // Add 1 minute buffer
+        const nextGameCountdown = Math.ceil(nextGameTime / 1000);
+        
+        sendToUser(telegramId, {
+          type: 'joined_shared_mid_game',
+          gameId: sharedGame.id,
+          roomId: sharedGame.roomId,
+          calledNumbers: sharedGame.calledNumbers,
+          currentCall: sharedGame.currentCall,
+          playersCount: sharedGame.players.size,
+          nextGameCountdown: nextGameCountdown
+        });
+        
+        // Notify other players
+        broadcastToLiveGame(sharedGame.roomId, {
+          type: 'player_joined_shared_mid_game',
+          telegramId: telegramId,
+          playersCount: sharedGame.players.size
+        }, [telegramId]);
+      }
+    } else {
+      // Create new shared game session
+      const gameId = `shared_${gameMode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newRoomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}_shared`;
+      const startTime = Date.now() + LIVE_GAME_CONFIG.waitTime;
+      
+      const newSharedGame = {
+        id: gameId,
+        roomId: newRoomId,
+        gameMode: gameMode,
+        state: 'waiting',
+        players: new Map([[telegramId, {
+          selectedNumbers: selectedNumbers || [],
+          markedNumbers: new Set(),
+          hasWon: false,
+          stake: stake
+        }]]),
+        calledNumbers: [],
+        currentCall: null,
+        startTime: startTime,
+        creator: telegramId,
+        numberCallTimer: null,
+        countdownTimer: null,
+        winners: [],
+        isSharedSession: true
+      };
+      
+      liveGameSessions.set(newRoomId, newSharedGame);
+      
+      // Add to game rooms
+      if (!gameRooms.has(newRoomId)) {
+        gameRooms.set(newRoomId, new Set());
+      }
+      gameRooms.get(newRoomId).add(telegramId);
+      
+      // Start countdown timer
+      const countdownTimer = setInterval(() => {
+        const timeLeft = Math.ceil((startTime - Date.now()) / 1000);
+        
+        if (timeLeft <= 0) {
+          clearInterval(countdownTimer);
+          startSharedGamePlay(newRoomId);
+        } else {
+          broadcastToLiveGame(newRoomId, {
+            type: 'shared_game_countdown',
+            countdown: timeLeft,
+            playersCount: newSharedGame.players.size
+          });
+        }
+      }, 1000);
+      
+      newSharedGame.countdownTimer = countdownTimer;
+      
+      // Notify creator
+      sendToUser(telegramId, {
+        type: 'shared_game_created',
+        gameId: gameId,
+        roomId: newRoomId,
+        countdown: Math.ceil(LIVE_GAME_CONFIG.waitTime / 1000),
+        playersCount: 1
       });
-    }, 5 * 60 * 1000); // 5 minutes
-    
-    // Acknowledge to the player who started the game
-    sendToUser(telegramId, {
-      type: 'game_start_initiated',
-      playersCount: gameRooms.get(roomId).size
-    });
+      
+      console.log(`✅ Shared game ${gameId} created in room ${newRoomId}`);
+    }
     
   } catch (error) {
-    console.error('Multiplayer game start error:', error);
+    console.error('Shared multiplayer game start error:', error);
     sendToUser(telegramId, {
       type: 'error',
-      message: 'Failed to start multiplayer game'
+      message: 'Failed to start shared multiplayer game'
     });
   }
 }
@@ -755,6 +882,577 @@ async function handleGlobalGameWin(telegramId, gameId, winPattern) {
   }
 }
 
+// ==================== LIVE SHARED GAME FUNCTIONS ====================
+
+// Handle starting a new live shared game
+async function handleStartLiveGame(ws, telegramId, message) {
+  const { gameMode, stake, token } = message;
+  const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}`;
+  
+  try {
+    console.log(`🎮 Starting live game for ${telegramId} in room ${roomId}`);
+    
+    // Check if there's already an active game in this room
+    if (liveGameSessions.has(roomId)) {
+      const existingGame = liveGameSessions.get(roomId);
+      if (existingGame.state === 'playing') {
+        // Join existing game instead
+        await handleJoinLiveGame(ws, telegramId, message);
+        return;
+      } else if (existingGame.state === 'waiting') {
+        // Join the waiting room
+        existingGame.players.set(telegramId, {
+          selectedNumbers: [],
+          markedNumbers: new Set(),
+          hasWon: false,
+          stake: stake
+        });
+        
+        // Notify all players about new player
+        broadcastToLiveGame(roomId, {
+          type: 'player_joined_waiting',
+          telegramId: telegramId,
+          playersCount: existingGame.players.size,
+          countdown: Math.ceil((existingGame.startTime - Date.now()) / 1000)
+        });
+        
+        ws.send(JSON.stringify({
+          type: 'joined_waiting_room',
+          roomId: roomId,
+          playersCount: existingGame.players.size,
+          countdown: Math.ceil((existingGame.startTime - Date.now()) / 1000)
+        }));
+        return;
+      }
+    }
+    
+    // Create new live game session
+    const gameId = `live_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now() + LIVE_GAME_CONFIG.waitTime;
+    
+    const liveGame = {
+      id: gameId,
+      roomId: roomId,
+      gameMode: gameMode,
+      state: 'waiting', // 'waiting', 'playing', 'finished'
+      players: new Map([[telegramId, {
+        selectedNumbers: [],
+        markedNumbers: new Set(),
+        hasWon: false,
+        stake: stake
+      }]]),
+      calledNumbers: [],
+      currentCall: null,
+      startTime: startTime,
+      creator: telegramId,
+      numberCallTimer: null,
+      winners: []
+    };
+    
+    liveGameSessions.set(roomId, liveGame);
+    
+    // Add players to room
+    if (!gameRooms.has(roomId)) {
+      gameRooms.set(roomId, new Set());
+    }
+    gameRooms.get(roomId).add(telegramId);
+    
+    // Start countdown timer
+    const countdownTimer = setInterval(() => {
+      const timeLeft = Math.ceil((startTime - Date.now()) / 1000);
+      
+      if (timeLeft <= 0) {
+        clearInterval(countdownTimer);
+        startLiveGamePlay(roomId);
+      } else {
+        broadcastToLiveGame(roomId, {
+          type: 'game_countdown',
+          countdown: timeLeft,
+          playersCount: liveGame.players.size
+        });
+      }
+    }, 1000);
+    
+    liveGame.countdownTimer = countdownTimer;
+    
+    // Notify creator
+    ws.send(JSON.stringify({
+      type: 'live_game_created',
+      gameId: gameId,
+      roomId: roomId,
+      countdown: Math.ceil(LIVE_GAME_CONFIG.waitTime / 1000),
+      playersCount: 1
+    }));
+    
+    console.log(`✅ Live game ${gameId} created in room ${roomId}`);
+    
+  } catch (error) {
+    console.error('Error starting live game:', error);
+    ws.send(JSON.stringify({
+      type: 'error',
+      message: 'Failed to start live game'
+    }));
+  }
+}
+
+// Handle joining an existing live game
+async function handleJoinLiveGame(ws, telegramId, message) {
+  const { gameMode, stake, token } = message;
+  const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}`;
+  
+  try {
+    console.log(`🎯 ${telegramId} joining live game in room ${roomId}`);
+    
+    const liveGame = liveGameSessions.get(roomId);
+    
+    if (!liveGame) {
+      ws.send(JSON.stringify({
+        type: 'no_live_game',
+        message: 'No active live game found. Start a new one!',
+        countdown: null
+      }));
+      return;
+    }
+    
+    // Add player to game room
+    if (!gameRooms.has(roomId)) {
+      gameRooms.set(roomId, new Set());
+    }
+    gameRooms.get(roomId).add(telegramId);
+    
+    if (liveGame.state === 'waiting') {
+      // Join waiting room
+      liveGame.players.set(telegramId, {
+        selectedNumbers: [],
+        markedNumbers: new Set(),
+        hasWon: false,
+        stake: stake
+      });
+      
+      const countdown = Math.ceil((liveGame.startTime - Date.now()) / 1000);
+      
+      // Notify all players
+      broadcastToLiveGame(roomId, {
+        type: 'player_joined_waiting',
+        telegramId: telegramId,
+        playersCount: liveGame.players.size,
+        countdown: countdown
+      });
+      
+      ws.send(JSON.stringify({
+        type: 'joined_waiting_room',
+        roomId: roomId,
+        playersCount: liveGame.players.size,
+        countdown: countdown
+      }));
+      
+    } else if (liveGame.state === 'playing') {
+      // Join game in progress
+      liveGame.players.set(telegramId, {
+        selectedNumbers: [],
+        markedNumbers: new Set(),
+        hasWon: false,
+        stake: stake
+      });
+      
+      // Calculate time until next game (since this game is already running)
+      const nextGameTime = Date.now() + 5 * 60 * 1000; // Estimate 5 minutes
+      
+      ws.send(JSON.stringify({
+        type: 'joined_mid_game',
+        roomId: roomId,
+        playersCount: liveGame.players.size,
+        calledNumbers: liveGame.calledNumbers,
+        currentCall: liveGame.currentCall,
+        nextGameCountdown: Math.ceil((nextGameTime - Date.now()) / 1000)
+      }));
+      
+      // Notify other players
+      broadcastToLiveGame(roomId, {
+        type: 'player_joined_mid_game',
+        telegramId: telegramId,
+        playersCount: liveGame.players.size
+      }, [telegramId]);
+      
+    } else {
+      ws.send(JSON.stringify({
+        type: 'game_finished',
+        message: 'Game has already finished'
+      }));
+    }
+    
+  } catch (error) {
+    console.error('Error joining live game:', error);
+    ws.send(JSON.stringify({
+      type: 'error',
+      message: 'Failed to join live game'
+    }));
+  }
+}
+
+// Start the actual live game play
+function startLiveGamePlay(roomId) {
+  const liveGame = liveGameSessions.get(roomId);
+  if (!liveGame) return;
+  
+  console.log(`🎯 Starting live game play in room ${roomId} with ${liveGame.players.size} players`);
+  
+  liveGame.state = 'playing';
+  liveGame.calledNumbers = [];
+  liveGame.currentCall = null;
+  
+  // Notify all players that game is starting
+  broadcastToLiveGame(roomId, {
+    type: 'live_game_started',
+    gameId: liveGame.id,
+    playersCount: liveGame.players.size
+  });
+  
+  // Start calling numbers
+  startLiveNumberCalling(roomId);
+}
+
+// Start shared game play (same as live game but with shared session flag)
+function startSharedGamePlay(roomId) {
+  const sharedGame = liveGameSessions.get(roomId);
+  if (!sharedGame) return;
+  
+  console.log(`🎯 Starting shared game play in room ${roomId} with ${sharedGame.players.size} players`);
+  
+  sharedGame.state = 'playing';
+  sharedGame.calledNumbers = [];
+  sharedGame.currentCall = null;
+  
+  // Notify all players that shared game is starting
+  broadcastToLiveGame(roomId, {
+    type: 'shared_game_started',
+    gameId: sharedGame.id,
+    playersCount: sharedGame.players.size,
+    isSharedSession: true
+  });
+  
+  // Start calling numbers for shared session
+  startSharedNumberCalling(roomId);
+}
+
+// Handle number calling for live games
+function startLiveNumberCalling(roomId) {
+  const liveGame = liveGameSessions.get(roomId);
+  if (!liveGame || liveGame.state !== 'playing') return;
+  
+  // Generate available numbers (1-75)
+  const availableNumbers = [];
+  for (let i = 1; i <= LIVE_GAME_CONFIG.maxNumbers; i++) {
+    if (!liveGame.calledNumbers.includes(i)) {
+      availableNumbers.push(i);
+    }
+  }
+  
+  if (availableNumbers.length === 0) {
+    endLiveGame(roomId, 'all_numbers_called');
+    return;
+  }
+  
+  // Call random number
+  const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+  const calledNumber = availableNumbers[randomIndex];
+  
+  liveGame.calledNumbers.push(calledNumber);
+  liveGame.currentCall = calledNumber;
+  
+  // Broadcast to all players
+  broadcastToLiveGame(roomId, {
+    type: 'live_number_called',
+    number: calledNumber,
+    calledNumbers: liveGame.calledNumbers,
+    totalCalled: liveGame.calledNumbers.length
+  });
+  
+  console.log(`📢 Live game ${roomId}: Called number ${calledNumber} (${liveGame.calledNumbers.length}/75)`);
+  
+  // Schedule next number call
+  liveGame.numberCallTimer = setTimeout(() => {
+    if (liveGame.state === 'playing') {
+      startLiveNumberCalling(roomId);
+    }
+  }, LIVE_GAME_CONFIG.numberCallInterval);
+}
+
+// Handle number calling for shared games (identical results for all players)
+function startSharedNumberCalling(roomId) {
+  const sharedGame = liveGameSessions.get(roomId);
+  if (!sharedGame || sharedGame.state !== 'playing') return;
+  
+  // Generate available numbers (1-75)
+  const availableNumbers = [];
+  for (let i = 1; i <= LIVE_GAME_CONFIG.maxNumbers; i++) {
+    if (!sharedGame.calledNumbers.includes(i)) {
+      availableNumbers.push(i);
+    }
+  }
+  
+  if (availableNumbers.length === 0 || sharedGame.calledNumbers.length >= 20) {
+    endSharedGame(roomId, 'all_numbers_called');
+    return;
+  }
+  
+  // Call random number - this will be the SAME for all players in the shared session
+  const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+  const calledNumber = availableNumbers[randomIndex];
+  
+  sharedGame.calledNumbers.push(calledNumber);
+  sharedGame.currentCall = calledNumber;
+  
+  // Broadcast to all players - they all see the same number at the same time
+  broadcastToLiveGame(roomId, {
+    type: 'shared_number_called',
+    number: calledNumber,
+    calledNumbers: sharedGame.calledNumbers,
+    totalCalled: sharedGame.calledNumbers.length,
+    currentCall: calledNumber,
+    isSharedSession: true
+  });
+  
+  console.log(`📢 Shared game ${roomId}: Called number ${calledNumber} (${sharedGame.calledNumbers.length}/20) for ${sharedGame.players.size} players`);
+  
+  // Schedule next number call (limit to 20 numbers)
+  if (sharedGame.calledNumbers.length < 20) {
+    sharedGame.numberCallTimer = setTimeout(() => {
+      if (sharedGame.state === 'playing') {
+        startSharedNumberCalling(roomId);
+      }
+    }, LIVE_GAME_CONFIG.numberCallInterval);
+  } else {
+    // End game after 20 numbers
+    endSharedGame(roomId, 'number_limit_reached');
+  }
+}
+
+// Handle Bingo claim in live game
+async function handleClaimLiveBingo(telegramId, message) {
+  const { gameMode, winPattern } = message;
+  const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}`;
+  
+  try {
+    const liveGame = liveGameSessions.get(roomId);
+    
+    if (!liveGame || liveGame.state !== 'playing') {
+      sendToUser(telegramId, {
+        type: 'error',
+        message: 'No active live game found'
+      });
+      return;
+    }
+    
+    const player = liveGame.players.get(telegramId);
+    if (!player) {
+      sendToUser(telegramId, {
+        type: 'error',
+        message: 'You are not in this game'
+      });
+      return;
+    }
+    
+    // Check if player already won
+    if (player.hasWon) {
+      sendToUser(telegramId, {
+        type: 'error',
+        message: 'You have already won'
+      });
+      return;
+    }
+    
+    // Mark player as winner
+    player.hasWon = true;
+    liveGame.winners.push({
+      telegramId: telegramId,
+      position: liveGame.winners.length + 1,
+      winPattern: winPattern,
+      claimTime: Date.now()
+    });
+    
+    // Get user name
+    let winnerName = 'Player';
+    try {
+      const User = require('./models/User');
+      const user = await User.findOne({ telegramId });
+      if (user) {
+        winnerName = user.name || 'Player';
+      }
+    } catch (error) {
+      console.log('Could not fetch user name:', error.message);
+    }
+    
+    // Broadcast win to all players
+    broadcastToLiveGame(roomId, {
+      type: 'live_bingo_claimed',
+      winner: telegramId,
+      winnerName: winnerName,
+      position: liveGame.winners.length,
+      winPattern: winPattern
+    });
+    
+    console.log(`🎉 Live Bingo claimed by ${telegramId} (${winnerName}) - Position: ${liveGame.winners.length}`);
+    
+    // End game if this is the first winner (or implement multiple winners)
+    if (liveGame.winners.length === 1) {
+      endLiveGame(roomId, 'bingo_claimed');
+    }
+    
+  } catch (error) {
+    console.error('Error handling live Bingo claim:', error);
+    sendToUser(telegramId, {
+      type: 'error',
+      message: 'Failed to process Bingo claim'
+    });
+  }
+}
+
+// End live game
+function endLiveGame(roomId, reason = 'completed') {
+  const liveGame = liveGameSessions.get(roomId);
+  if (!liveGame) return;
+  
+  liveGame.state = 'finished';
+  
+  // Clear timers
+  if (liveGame.numberCallTimer) {
+    clearTimeout(liveGame.numberCallTimer);
+  }
+  if (liveGame.countdownTimer) {
+    clearInterval(liveGame.countdownTimer);
+  }
+  
+  // Broadcast game end
+  broadcastToLiveGame(roomId, {
+    type: 'live_game_ended',
+    gameId: liveGame.id,
+    reason: reason,
+    winners: liveGame.winners,
+    totalPlayers: liveGame.players.size,
+    totalNumbersCalled: liveGame.calledNumbers.length
+  });
+  
+  console.log(`🏁 Live game ${roomId} ended. Reason: ${reason}, Winners: ${liveGame.winners.length}`);
+  
+  // Clean up after 2 minutes
+  setTimeout(() => {
+    liveGameSessions.delete(roomId);
+    if (gameRooms.has(roomId)) {
+      gameRooms.delete(roomId);
+    }
+  }, 2 * 60 * 1000);
+}
+
+// End shared game
+function endSharedGame(roomId, reason = 'completed') {
+  const sharedGame = liveGameSessions.get(roomId);
+  if (!sharedGame) return;
+  
+  sharedGame.state = 'finished';
+  
+  // Clear timers
+  if (sharedGame.numberCallTimer) {
+    clearTimeout(sharedGame.numberCallTimer);
+  }
+  if (sharedGame.countdownTimer) {
+    clearInterval(sharedGame.countdownTimer);
+  }
+  
+  // Broadcast shared game end
+  broadcastToLiveGame(roomId, {
+    type: 'shared_game_ended',
+    gameId: sharedGame.id,
+    reason: reason,
+    winners: sharedGame.winners,
+    totalPlayers: sharedGame.players.size,
+    totalNumbersCalled: sharedGame.calledNumbers.length,
+    calledNumbers: sharedGame.calledNumbers,
+    isSharedSession: true
+  });
+  
+  console.log(`🏁 Shared game ${roomId} ended. Reason: ${reason}, Winners: ${sharedGame.winners.length}, Players: ${sharedGame.players.size}`);
+  
+  // Schedule next shared game (60 seconds countdown)
+  setTimeout(() => {
+    createNextSharedGame(sharedGame.gameMode);
+  }, 5000); // Wait 5 seconds before creating next game
+  
+  // Clean up after 2 minutes
+  setTimeout(() => {
+    liveGameSessions.delete(roomId);
+    if (gameRooms.has(roomId)) {
+      gameRooms.delete(roomId);
+    }
+  }, 2 * 60 * 1000);
+}
+
+// Create next shared game session
+function createNextSharedGame(gameMode) {
+  const gameId = `shared_${gameMode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}_shared`;
+  const startTime = Date.now() + 60000; // 60 seconds countdown for next game
+  
+  const nextSharedGame = {
+    id: gameId,
+    roomId: roomId,
+    gameMode: gameMode,
+    state: 'waiting',
+    players: new Map(),
+    calledNumbers: [],
+    currentCall: null,
+    startTime: startTime,
+    creator: 'system',
+    numberCallTimer: null,
+    countdownTimer: null,
+    winners: [],
+    isSharedSession: true
+  };
+  
+  liveGameSessions.set(roomId, nextSharedGame);
+  
+  // Start countdown timer for next game
+  const countdownTimer = setInterval(() => {
+    const timeLeft = Math.ceil((startTime - Date.now()) / 1000);
+    
+    if (timeLeft <= 0) {
+      clearInterval(countdownTimer);
+      if (nextSharedGame.players.size > 0) {
+        startSharedGamePlay(roomId);
+      } else {
+        // No players, restart countdown
+        createNextSharedGame(gameMode);
+      }
+    } else {
+      // Broadcast countdown to anyone interested
+      broadcastToLiveGame(roomId, {
+        type: 'next_shared_game_countdown',
+        countdown: timeLeft,
+        gameId: gameId,
+        playersCount: nextSharedGame.players.size
+      });
+    }
+  }, 1000);
+  
+  nextSharedGame.countdownTimer = countdownTimer;
+  
+  console.log(`⏰ Next shared game ${gameId} scheduled for mode ${gameMode} in 60 seconds`);
+}
+
+// Broadcast to all players in live game
+function broadcastToLiveGame(roomId, message, excludeUsers = []) {
+  if (!gameRooms.has(roomId)) return;
+  
+  gameRooms.get(roomId).forEach(telegramId => {
+    if (excludeUsers.includes(telegramId)) return;
+    
+    const connection = connections.get(telegramId);
+    if (connection && connection.ws.readyState === WebSocket.OPEN) {
+      connection.ws.send(JSON.stringify(message));
+    }
+  });
+}
+
 // Export functions for external use
 module.exports = {
   notifyPaymentVerified,
@@ -763,10 +1461,16 @@ module.exports = {
   sendToUser,
   broadcastToRoom,
   broadcastToAllUsers,
+  broadcastToLiveGame,
   handleGlobalGameWin,
+  handleStartLiveGame,
+  handleJoinLiveGame,
+  handleClaimLiveBingo,
+  endLiveGame,
   connections,
   gameRooms,
   globalGameSessions,
+  liveGameSessions,
   gameScheduler,
   startServer: () => {
     const PORT = process.env.WS_PORT || 3002;
