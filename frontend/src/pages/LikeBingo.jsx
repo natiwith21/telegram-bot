@@ -142,29 +142,26 @@ const LikeBingo = () => {
         case 'shared_game_created':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Shared Bingo ${gameMode} created, waiting for players...`);
-            // Stay in setup state but set countdown for existing UI
+            // Set countdown for existing Count Down UI only
             setMultiplayerCountdown(lastMessage.countdown);
-            showBalanceNotification(`🎮 Game starting soon! ${lastMessage.countdown}s`, 'info');
           }
           break;
 
         case 'joined_shared_waiting':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Joined shared Bingo ${gameMode} waiting room`);
-            // Stay in setup state but set countdown for existing UI
+            // Set countdown for existing Count Down UI only
             setMultiplayerCountdown(lastMessage.countdown);
-            showBalanceNotification(`🎮 ${lastMessage.playersCount} players waiting... ${lastMessage.countdown}s`, 'info');
           }
           break;
 
         case 'joined_shared_mid_game':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎯 Joined shared Bingo ${gameMode} in progress`);
-            // Stay in setup state but show countdown in existing UI
+            // Set countdown for existing Count Down UI only
             setMultiplayerCountdown(lastMessage.nextGameCountdown);
             setDrawnNumbers(lastMessage.calledNumbers || []);
             setCurrentCall(lastMessage.currentCall);
-            showBalanceNotification(`⏰ Game in progress! Next: ${lastMessage.nextGameCountdown}s`, 'info');
           }
           break;
 
@@ -172,15 +169,11 @@ const LikeBingo = () => {
           if (lastMessage.telegramId !== telegramId) {
             console.log(`👥 Player ${lastMessage.telegramId} joined shared waiting room`);
             setMultiplayerCountdown(lastMessage.countdown);
-            showBalanceNotification(`👥 Player joined! ${lastMessage.playersCount} players waiting...`, 'info');
           }
           break;
 
         case 'shared_game_countdown':
           setMultiplayerCountdown(lastMessage.countdown);
-          if (lastMessage.countdown > 0) {
-            showBalanceNotification(`🎮 Starting in ${lastMessage.countdown}s...`, 'info');
-          }
           break;
 
         case 'shared_game_started':
@@ -191,7 +184,6 @@ const LikeBingo = () => {
           // Don't call startDrawing() - numbers come from WebSocket only
           setDrawnNumbers([]); // Reset drawn numbers for new game
           setCurrentCall(null); // Reset current call
-          showBalanceNotification(`🎯 Shared game started with ${lastMessage.playersCount} players!`, 'info');
           break;
 
         case 'shared_number_called':
@@ -218,17 +210,13 @@ const LikeBingo = () => {
             drawIntervalRef.current = null;
           }
           
-          showBalanceNotification(`🏁 Shared game ended! ${lastMessage.winners?.length || 0} winners`, 'info');
-          
           // Process game result only if no one claimed bingo during the game
           if (!bingoWinner) {
             const playerWon = lastMessage.winners?.some(winner => winner.telegramId === telegramId);
             if (playerWon) {
               await handleGameWin();
-              alert(`🎉 You won the shared game!`);
             } else {
               await handleGameLoss();
-              alert(`🎯 Shared game ended. ${lastMessage.winners?.length || 0} players won.`);
             }
           }
           
@@ -239,11 +227,8 @@ const LikeBingo = () => {
           break;
 
         case 'next_shared_game_countdown':
-          // Show countdown for next shared game in existing UI
+          // Show countdown for next shared game in existing Count Down UI only
           setMultiplayerCountdown(lastMessage.countdown);
-          if (lastMessage.countdown > 0) {
-            showBalanceNotification(`⏰ Next game: ${lastMessage.countdown}s`, 'info');
-          }
           break;
           
         default:
@@ -532,7 +517,6 @@ const LikeBingo = () => {
         });
         
         console.log('🎮 Starting shared multiplayer game - balance will be updated on game end only');
-        showBalanceNotification(`🎮 Starting shared Bingo ${gameMode}! Stake: ${stake} coins at risk`, 'info');
         setGameNumber(prev => prev + 1);
         // Don't set game state here - wait for WebSocket response
         setIsLoading(false);
