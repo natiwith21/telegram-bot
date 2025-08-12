@@ -142,29 +142,29 @@ const LikeBingo = () => {
         case 'shared_game_created':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Shared Bingo ${gameMode} created, waiting for players...`);
-            setGameState('countdown');
+            // Stay in setup state but set countdown for existing UI
             setMultiplayerCountdown(lastMessage.countdown);
-            showBalanceNotification(`🎮 Shared Bingo ${gameMode} created! Waiting for other players...`, 'info');
+            showBalanceNotification(`🎮 Game starting soon! ${lastMessage.countdown}s`, 'info');
           }
           break;
 
         case 'joined_shared_waiting':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Joined shared Bingo ${gameMode} waiting room`);
-            setGameState('countdown');
+            // Stay in setup state but set countdown for existing UI
             setMultiplayerCountdown(lastMessage.countdown);
-            showBalanceNotification(`🎮 Joined shared Bingo ${gameMode}! ${lastMessage.playersCount} players waiting...`, 'info');
+            showBalanceNotification(`🎮 ${lastMessage.playersCount} players waiting... ${lastMessage.countdown}s`, 'info');
           }
           break;
 
         case 'joined_shared_mid_game':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎯 Joined shared Bingo ${gameMode} in progress`);
-            setGameState('finished'); // Show waiting for next game
+            // Stay in setup state but show countdown in existing UI
             setMultiplayerCountdown(lastMessage.nextGameCountdown);
             setDrawnNumbers(lastMessage.calledNumbers || []);
             setCurrentCall(lastMessage.currentCall);
-            showBalanceNotification(`⏰ Bingo ${gameMode} in progress! Next game starts in ${lastMessage.nextGameCountdown}s`, 'info');
+            showBalanceNotification(`⏰ Game in progress! Next: ${lastMessage.nextGameCountdown}s`, 'info');
           }
           break;
 
@@ -178,6 +178,9 @@ const LikeBingo = () => {
 
         case 'shared_game_countdown':
           setMultiplayerCountdown(lastMessage.countdown);
+          if (lastMessage.countdown > 0) {
+            showBalanceNotification(`🎮 Starting in ${lastMessage.countdown}s...`, 'info');
+          }
           break;
 
         case 'shared_game_started':
@@ -196,15 +199,6 @@ const LikeBingo = () => {
           console.log(`📢 Shared number called: ${lastMessage.number}`);
           setCurrentCall(lastMessage.number);
           setDrawnNumbers(lastMessage.calledNumbers);
-          
-          // Automatically mark the number on the player's card if it exists
-          if (bingoCard.flat().includes(lastMessage.number)) {
-            const cellId = getCellIdForNumber(lastMessage.number);
-            if (cellId) {
-              setMarkedCells(prev => new Set([...prev, cellId]));
-              console.log(`✅ Auto-marked ${lastMessage.number} on player's card`);
-            }
-          }
           
           // Play sound if enabled
           if (soundEnabled) {
@@ -245,16 +239,10 @@ const LikeBingo = () => {
           break;
 
         case 'next_shared_game_countdown':
-          // Show countdown for next shared game
+          // Show countdown for next shared game in existing UI
           setMultiplayerCountdown(lastMessage.countdown);
-          if (gameState === 'finished') {
-            showBalanceNotification(`⏰ Next shared game starts in ${lastMessage.countdown}s`, 'info');
-          }
-          
-          // Auto-join when countdown reaches 0
-          if (lastMessage.countdown <= 0 && gameState === 'finished') {
-            setGameState('countdown');
-            showBalanceNotification(`🎮 Joining next shared game...`, 'info');
+          if (lastMessage.countdown > 0) {
+            showBalanceNotification(`⏰ Next game: ${lastMessage.countdown}s`, 'info');
           }
           break;
           
@@ -490,17 +478,7 @@ const LikeBingo = () => {
     setMarkedCells(new Set(['2-2']));
   };
 
-  // Helper function to get cell ID for a number on the bingo card
-  const getCellIdForNumber = (number) => {
-    for (let row = 0; row < bingoCard.length; row++) {
-      for (let col = 0; col < bingoCard[row].length; col++) {
-        if (bingoCard[row][col] === number) {
-          return `${row}-${col}`;
-        }
-      }
-    }
-    return null;
-  };
+
 
   const startGame = async () => {
     // For demo mode, skip balance checks
@@ -1401,20 +1379,7 @@ const LikeBingo = () => {
         </motion.div>
       )}
 
-      {/* WebSocket Connection Status */}
-      {isConnected && (
-        <div style={{
-          backgroundColor: '#10b981',
-          color: 'white',
-          padding: '5px 10px',
-          borderRadius: '8px',
-          fontSize: '12px',
-          textAlign: 'center',
-          marginBottom: '10px'
-        }}>
-          🎮 Connected to Multiplayer Server
-        </div>
-      )}
+
 
       {/* Warning Message */}
       <AnimatePresence>
@@ -1468,8 +1433,7 @@ const LikeBingo = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      {isLoading ? 'Starting...' : 
-                       isConnected && ['10', '20', '50', '100'].includes(gameMode) ? 'Join Shared Game' : 'Start Live Game'}
+                      {isLoading ? 'Starting...' : 'Start Live Game'}
                     </motion.button>
                   </div>
                 </>
@@ -1477,87 +1441,7 @@ const LikeBingo = () => {
             </>
           )}
 
-          {/* Shared Game Countdown State */}
-          {gameState === 'countdown' && (
-            <div style={styles.liveGamePage}>
-              <div style={styles.liveGameTitle}>
-                🎮 Shared Multiplayer Game
-              </div>
-              
-              <div style={styles.liveCountdown}>
-                <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>
-                  {multiplayerCountdown || 0}
-                </div>
-                <p>Waiting for players to join shared session...</p>
-                <p style={{ fontSize: '14px', opacity: 0.8 }}>
-                  Game will start automatically when countdown reaches 0
-                </p>
-              </div>
 
-              <div style={styles.gameInfo}>
-                <strong>🎯 Shared Session Mode</strong><br/>
-                • All players see the same numbers<br/>
-                • Same game results for everyone<br/>
-                • Your card is unique to you<br/>
-                • Stake: {stake} coins
-              </div>
-              
-              <h3 style={styles.sectionTitle}>Your Bingo Card (B-I-N-G-O)</h3>
-              {renderBingoCard()}
-              
-              <div style={styles.buttonRow}>
-                <motion.button 
-                  style={{ ...styles.button, backgroundColor: "#ef4444" }}
-                  onClick={resetGame}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Cancel
-                </motion.button>
-              </div>
-            </div>
-          )}
-
-          {/* Game Finished State with Next Game Countdown */}
-          {gameState === 'finished' && multiplayerCountdown !== null && (
-            <div style={styles.liveGamePage}>
-              <div style={styles.liveGameTitle}>
-                ⏰ Next Shared Game
-              </div>
-              
-              <div style={styles.liveCountdown}>
-                <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px', color: '#f59e0b' }}>
-                  {multiplayerCountdown}
-                </div>
-                <p>Game in progress... Next shared game starts in:</p>
-                <p style={{ fontSize: '14px', opacity: 0.8 }}>
-                  You joined while another game was running
-                </p>
-              </div>
-
-              <div style={styles.gameInfo}>
-                <strong>⏰ Waiting for Next Game</strong><br/>
-                • Current game still in progress<br/>
-                • You'll join the next shared session<br/>
-                • Keep this tab open to auto-join<br/>
-                • Stake: {stake} coins
-              </div>
-              
-              <h3 style={styles.sectionTitle}>Your Bingo Card (Ready)</h3>
-              {renderBingoCard()}
-              
-              <div style={styles.buttonRow}>
-                <motion.button 
-                  style={{ ...styles.button, backgroundColor: "#ef4444" }}
-                  onClick={resetGame}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Leave Queue
-                </motion.button>
-              </div>
-            </div>
-          )}
 
           {gameState === 'playing' && (
             <div style={styles.bingoHallContainer}>
