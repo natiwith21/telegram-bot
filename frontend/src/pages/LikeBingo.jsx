@@ -111,9 +111,16 @@ const LikeBingo = () => {
           break;
           
         case 'bingo_claimed':
+        case 'live_bingo_claimed':
           // Someone claimed Bingo
           setBingoWinner(lastMessage.winner);
           setGameState('finished');
+          
+          // Stop any local drawing intervals
+          if (drawIntervalRef.current) {
+            clearInterval(drawIntervalRef.current);
+            drawIntervalRef.current = null;
+          }
           
           if (lastMessage.winner === telegramId) {
             // Handle win - update balance based on game mode
@@ -172,7 +179,9 @@ const LikeBingo = () => {
           setGameStarted(true);
           setGameState('playing');
           setMultiplayerCountdown(null);
-          startDrawing();
+          // Don't call startDrawing() - numbers come from WebSocket only
+          setDrawnNumbers([]); // Reset drawn numbers for new game
+          setCurrentCall(null); // Reset current call
           showBalanceNotification(`🎯 Shared game started with ${lastMessage.playersCount} players!`, 'info');
           break;
 
@@ -182,17 +191,18 @@ const LikeBingo = () => {
           setCurrentCall(lastMessage.number);
           setDrawnNumbers(lastMessage.calledNumbers);
           
-          // Add to drawn numbers list if not already there
-          if (!drawnNumbers.includes(lastMessage.number)) {
-            setDrawnNumbers(prev => [...prev, lastMessage.number]);
-          }
-          
-          // Check if this number is on our card
+          // Automatically mark the number on the player's card if it exists
           if (bingoCard.flat().includes(lastMessage.number)) {
             const cellId = getCellIdForNumber(lastMessage.number);
             if (cellId) {
               setMarkedCells(prev => new Set([...prev, cellId]));
+              console.log(`✅ Auto-marked ${lastMessage.number} on player's card`);
             }
+          }
+          
+          // Play sound if enabled
+          if (soundEnabled) {
+            playDrawSound();
           }
           break;
 
@@ -201,15 +211,31 @@ const LikeBingo = () => {
           setGameState('finished');
           setGameStarted(false);
           setMultiplayerCountdown(null);
+          
+          // Stop any local drawing intervals
+          if (drawIntervalRef.current) {
+            clearInterval(drawIntervalRef.current);
+            drawIntervalRef.current = null;
+          }
+          
           showBalanceNotification(`🏁 Shared game ended! ${lastMessage.winners?.length || 0} winners`, 'info');
           
-          // Process game result
-          const playerWon = lastMessage.winners?.some(winner => winner.telegramId === telegramId);
-          if (playerWon) {
-            await handleGameWin();
-          } else {
-            await handleGameLoss();
+          // Process game result only if no one claimed bingo during the game
+          if (!bingoWinner) {
+            const playerWon = lastMessage.winners?.some(winner => winner.telegramId === telegramId);
+            if (playerWon) {
+              await handleGameWin();
+              alert(`🎉 You won the shared game!`);
+            } else {
+              await handleGameLoss();
+              alert(`🎯 Shared game ended. ${lastMessage.winners?.length || 0} players won.`);
+            }
           }
+          
+          // Reset game after 3 seconds
+          setTimeout(() => {
+            resetGame();
+          }, 3000);
           break;
 
         case 'next_shared_game_countdown':
@@ -217,6 +243,12 @@ const LikeBingo = () => {
           setMultiplayerCountdown(lastMessage.countdown);
           if (gameState === 'finished') {
             showBalanceNotification(`⏰ Next shared game starts in ${lastMessage.countdown}s`, 'info');
+          }
+          
+          // Auto-join when countdown reaches 0
+          if (lastMessage.countdown <= 0 && gameState === 'finished') {
+            setGameState('countdown');
+            showBalanceNotification(`🎮 Joining next shared game...`, 'info');
           }
           break;
           
@@ -580,6 +612,22 @@ const LikeBingo = () => {
   };
 
   const startDrawing = () => {
+    // Check if we're in shared multiplayer mode
+    if (isConnected && gameMode !== 'demo') {
+      console.log('🌐 Shared multiplayer mode - numbers will come via WebSocket');
+      setGameState('playing');
+      setDrawnNumbers([]);
+      setCurrentCall(null);
+      // Don't start local drawing - wait for WebSocket numbers
+      return;
+    }
+    
+    // Local drawing for demo mode or when WebSocket is not connected
+    console.log('🎮 Starting local drawing (demo/fallback mode)');
+    startLocalDrawing();
+  };
+
+  const startLocalDrawing = () => {
     // Clear any existing drawing interval
     if (drawIntervalRef.current) {
       clearInterval(drawIntervalRef.current);
@@ -705,7 +753,16 @@ const LikeBingo = () => {
     }
     
     // Send Bingo claim via WebSocket
-    if (isConnected) {
+    if (isConnected && gameMode !== 'demo') {
+      // For shared multiplayer games, use shared bingo claim
+      sendMessage({
+        type: 'claim_live_bingo',
+        telegramId,
+        gameMode,
+        winPattern: 'line' // Could be enhanced to detect actual pattern
+      });
+    } else {
+      // Fallback for local games
       sendMessage({
         type: 'claim_bingo',
         telegramId,
@@ -1399,7 +1456,8 @@ const LikeBingo = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      {isLoading ? 'Starting...' : 'Start Live Game'}
+                      {isLoading ? 'Starting...' : 
+                       isConnected && gameMode !== 'demo' ? 'Join Shared Game' : 'Start Live Game'}
                     </motion.button>
                   </div>
                 </>
