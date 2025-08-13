@@ -24,6 +24,7 @@ const LikeBingo = () => {
   const [hasSelectedNumber, setHasSelectedNumber] = useState(false); // New state to track if user has selected a number
   const [selectedNumber, setSelectedNumber] = useState(null); // Track which number was selected
   const [balanceNotification, setBalanceNotification] = useState(''); // Show balance update notifications
+  const [gameHistory, setGameHistory] = useState([]); // Store user's game history
   
   // WebSocket connection for multiplayer
   const { isConnected, lastMessage, sendMessage } = useWebSocket(telegramId, token, 'like-bingo-room');
@@ -352,6 +353,12 @@ const LikeBingo = () => {
       console.log('Demo mode: Setting demo balance');
       setUserBalance(1000);
       setUserBonus(0);
+      // Set demo game history
+      setGameHistory([
+        'Bingo Demo: WIN - Demo win, no real coins affected',
+        'Bingo Demo: LOSS - Demo loss, no real coins affected',
+        'Bingo Demo: WIN - Demo win, no real coins affected'
+      ]);
       return;
     }
     
@@ -376,11 +383,14 @@ const LikeBingo = () => {
       if (data.success && data.user) {
         const balance = parseInt(data.user.balance) || 0;
         const bonus = parseInt(data.user.bonus) || 0;
+        const history = data.user.gameHistory || [];
         
         console.log(`💰 Setting balance: ${balance}, bonus: ${bonus}`);
+        console.log(`📊 Game history loaded: ${history.length} games`);
         
         setUserBalance(balance);
         setUserBonus(bonus);
+        setGameHistory(history);
         
         // Set stake based on game mode
         const stakeCost = parseInt(gameMode);
@@ -1172,8 +1182,134 @@ const LikeBingo = () => {
       case 'History':
         return (
           <div style={styles.tabContent}>
-            <h3>Game History</h3>
-            <p>Previous games will appear here</p>
+            <h3>📊 Game History</h3>
+            {gameMode === 'demo' ? (
+              <>
+                <div style={{
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  marginBottom: '15px'
+                }}>
+                  🎮 Demo Mode - Sample game history
+                </div>
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {gameHistory.slice().reverse().map((game, index) => {
+                    const isWin = game.includes('WIN');
+                    const isLoss = game.includes('LOSS');
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        style={{
+                          backgroundColor: isWin ? '#dcfce7' : isLoss ? '#fef2f2' : '#f8fafc',
+                          border: `1px solid ${isWin ? '#bbf7d0' : isLoss ? '#fecaca' : '#e2e8f0'}`,
+                          borderRadius: '8px',
+                          padding: '12px',
+                          marginBottom: '8px',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          fontWeight: '500'
+                        }}>
+                          <span style={{ fontSize: '16px' }}>
+                            {isWin ? '🏆' : isLoss ? '😔' : '🎮'}
+                          </span>
+                          <span style={{ 
+                            color: isWin ? '#16a34a' : isLoss ? '#dc2626' : '#374151' 
+                          }}>
+                            {game}
+                          </span>
+                        </div>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#6b7280', 
+                          marginTop: '4px' 
+                        }}>
+                          Demo Game #{gameHistory.length - index}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : gameHistory.length === 0 ? (
+              <div style={{
+                backgroundColor: '#f3f4f6',
+                color: '#6b7280',
+                padding: '20px',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                📋 No games played yet
+                <br/>
+                <small>Your game results will appear here after playing</small>
+              </div>
+            ) : (
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                {gameHistory.slice().reverse().map((game, index) => {
+                  const isWin = game.includes('WIN');
+                  const isLoss = game.includes('LOSS');
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      style={{
+                        backgroundColor: isWin ? '#dcfce7' : isLoss ? '#fef2f2' : '#f8fafc',
+                        border: `1px solid ${isWin ? '#bbf7d0' : isLoss ? '#fecaca' : '#e2e8f0'}`,
+                        borderRadius: '8px',
+                        padding: '12px',
+                        marginBottom: '8px',
+                        fontSize: '14px'
+                      }}
+                    >
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        fontWeight: '500'
+                      }}>
+                        <span style={{ fontSize: '16px' }}>
+                          {isWin ? '🏆' : isLoss ? '😔' : '🎮'}
+                        </span>
+                        <span style={{ 
+                          color: isWin ? '#16a34a' : isLoss ? '#dc2626' : '#374151' 
+                        }}>
+                          {game}
+                        </span>
+                      </div>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: '#6b7280', 
+                        marginTop: '4px' 
+                      }}>
+                        Game #{gameHistory.length - index}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            <button 
+              onClick={() => {
+                showBalanceNotification('🔄 Refreshing game history...', 'info');
+                loadUserData();
+              }} 
+              style={{
+                ...styles.refreshBtn, 
+                marginTop: '15px',
+                width: '100%'
+              }}
+            >
+              🔄 Refresh History
+            </button>
           </div>
         );
       
