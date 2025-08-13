@@ -1252,8 +1252,8 @@ const LikeBingo = () => {
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <span style={styles.backBtn} onClick={() => navigate('/menu')}>✕</span>
-        <span style={styles.title}>Like Bingo ⏷</span>
+        <span style={styles.backBtn} onClick={() => navigate('/')}>✕</span>
+        <span style={styles.title}>Like Bingo ⩔</span>
         <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
       </div>
 
