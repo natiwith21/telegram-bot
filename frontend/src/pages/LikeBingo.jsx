@@ -1256,6 +1256,13 @@ const LikeBingo = () => {
         <span style={styles.title}>Like Bingo ⩔</span>
         <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
       </div>
+      
+      {/* Scrollable Content Area */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        paddingBottom: '10px'
+      }}>
 
       {/* Debug Info - Remove this after fixing */}
       {process.env.NODE_ENV === 'development' && (
@@ -1591,6 +1598,8 @@ const LikeBingo = () => {
           </motion.div>
         ))}
       </div>
+      
+      </div> {/* Close scrollable content area */}
     </div>
   );
 };
@@ -1600,19 +1609,23 @@ const styles = {
   container: {
     fontFamily: "Arial, sans-serif",
     backgroundColor: "#d1a5e3",
-    minHeight: "100vh",
-    padding: "10px",
+    height: "100vh",
+    maxHeight: "100vh",
+    padding: "8px",
     boxSizing: "border-box",
-    paddingBottom: "70px",
-    position: "relative"
+    paddingBottom: "60px",
+    position: "relative",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column"
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    fontSize: "18px",
+    fontSize: "16px",
     fontWeight: "bold",
-    padding: "10px 0",
+    padding: "8px 0",
     position: "relative"
   },
   backBtn: { 
@@ -1873,9 +1886,10 @@ const styles = {
   tabContent: {
     backgroundColor: "white",
     borderRadius: "12px",
-    padding: "20px",
-    margin: "10px 0",
-    minHeight: "300px"
+    padding: "15px",
+    margin: "8px 0",
+    maxHeight: "calc(100vh - 200px)",
+    overflowY: "auto"
   },
   scoreItem: {
     display: "flex",
@@ -1984,10 +1998,10 @@ const styles = {
   },
   bingoTitle: {
     textAlign: "center",
-    padding: "10px",
-    fontSize: "24px",
+    padding: "8px",
+    fontSize: "20px",
     fontWeight: "bold",
-    letterSpacing: "3px",
+    letterSpacing: "2px",
     background: "linear-gradient(to right, #ff8a00, #ff0080, #00b3ff)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
@@ -1995,8 +2009,8 @@ const styles = {
   },
   mainContent: {
     display: "flex",
-    padding: "10px",
-    gap: "10px"
+    padding: "8px",
+    gap: "8px"
   },
   fullBingoCard: {
     flex: "1 1 50%",
@@ -2034,11 +2048,11 @@ const styles = {
   playerBingoCell: {
     background: "#1a2a4a",
     borderRadius: "4px",
-    height: "50px",
+    height: "35px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "16px",
+    fontSize: "14px",
     fontWeight: "bold",
     transition: "all 0.3s ease"
   },
@@ -2062,10 +2076,10 @@ const styles = {
   controlPanel: {
     background: "#0d1526",
     borderRadius: "8px",
-    padding: "15px",
+    padding: "10px",
     textAlign: "center",
     boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)",
-    marginBottom: "10px"
+    marginBottom: "8px"
   },
   controlTitle: {
     fontSize: "14px",
@@ -2074,9 +2088,9 @@ const styles = {
     color: "#a0a0a0"
   },
   controlValue: {
-    fontSize: "20px",
+    fontSize: "18px",
     fontWeight: "bold",
-    height: "40px",
+    height: "35px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -2136,17 +2150,17 @@ const styles = {
   },
   bingoSection: {
     background: "linear-gradient(to right, #ff8a00, #ff0080)",
-    padding: "15px",
+    padding: "12px",
     textAlign: "center",
-    margin: "10px",
+    margin: "8px",
     borderRadius: "8px",
     boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)"
   },
   bingoSectionTitle: {
-    fontSize: "32px",
+    fontSize: "24px",
     fontWeight: "bold",
-    letterSpacing: "3px",
-    marginBottom: "10px",
+    letterSpacing: "2px",
+    marginBottom: "8px",
     textShadow: "0 2px 5px rgba(0, 0, 0, 0.5)",
     color: "#fff"
   },
@@ -2154,7 +2168,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "15px"
+    gap: "10px"
   },
   controlButtonsRow: {
     display: "flex",
@@ -2163,10 +2177,10 @@ const styles = {
     flexWrap: "wrap"
   },
   refreshBingoBtn: {
-    padding: "12px 20px",
+    padding: "10px 16px",
     border: "none",
-    borderRadius: "20px",
-    fontSize: "16px",
+    borderRadius: "16px",
+    fontSize: "14px",
     fontWeight: "bold",
     cursor: "pointer",
     background: "#1a2a4a",
@@ -2174,15 +2188,15 @@ const styles = {
     transition: "all 0.3s",
     display: "flex",
     alignItems: "center",
-    gap: "5px",
-    minWidth: "120px",
+    gap: "4px",
+    minWidth: "100px",
     justifyContent: "center"
   },
   leaveBingoBtn: {
-    padding: "12px 20px",
+    padding: "10px 16px",
     border: "none",
-    borderRadius: "20px",
-    fontSize: "16px",
+    borderRadius: "16px",
+    fontSize: "14px",
     fontWeight: "bold",
     cursor: "pointer",
     background: "#ff3333",
@@ -2190,15 +2204,15 @@ const styles = {
     transition: "all 0.3s",
     display: "flex",
     alignItems: "center",
-    gap: "5px",
-    minWidth: "120px",
+    gap: "4px",
+    minWidth: "100px",
     justifyContent: "center"
   },
   claimBingoBtn: {
-    padding: "15px 30px",
+    padding: "12px 24px",
     border: "none",
-    borderRadius: "25px",
-    fontSize: "20px",
+    borderRadius: "20px",
+    fontSize: "16px",
     fontWeight: "bold",
     cursor: "pointer",
     background: "linear-gradient(to right, #00ff00, #ffff00)",
@@ -2206,10 +2220,10 @@ const styles = {
     transition: "all 0.3s",
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "6px",
     boxShadow: "0 4px 15px rgba(0, 255, 0, 0.4)",
     animation: "pulse 1s infinite",
-    minWidth: "200px",
+    minWidth: "160px",
     justifyContent: "center"
   },
   gameEndSection: {
