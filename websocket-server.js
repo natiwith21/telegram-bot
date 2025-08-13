@@ -378,20 +378,27 @@ async function handleStartMultiplayerGame(telegramId, message) {
         
         const countdown = Math.max(0, Math.ceil((sharedGame.startTime - Date.now()) / 1000));
         
+        // CRITICAL: Ensure all users see EXACT same countdown
+        const serverTime = Date.now();
+        const syncMessage = {
+          countdown: countdown,
+          serverTime: serverTime,
+          startTime: sharedGame.startTime,
+          playersCount: sharedGame.players.size
+        };
+        
         // Notify all players about new player joining with SYNCHRONIZED countdown
         broadcastToLiveGame(sharedGame.roomId, {
           type: 'player_joined_shared_waiting',
           telegramId: telegramId,
-          playersCount: sharedGame.players.size,
-          countdown: countdown
+          ...syncMessage
         });
         
         sendToUser(telegramId, {
           type: 'joined_shared_waiting',
           gameId: sharedGame.id,
           roomId: sharedGame.roomId,
-          countdown: countdown,
-          playersCount: sharedGame.players.size
+          ...syncMessage
         });
         
       } else if (sharedGame.state === 'playing') {
@@ -463,16 +470,20 @@ async function handleStartMultiplayerGame(telegramId, message) {
       
       // Start countdown timer with proper synchronization
       const countdownTimer = setInterval(() => {
-        const timeLeft = Math.max(0, Math.ceil((startTime - Date.now()) / 1000));
+        const currentTime = Date.now();
+        const timeLeft = Math.max(0, Math.ceil((startTime - currentTime) / 1000));
         
         if (timeLeft <= 0) {
           clearInterval(countdownTimer);
-          startSharedGamePlay(newRoomId);
+          // CRITICAL: Add buffer time to ensure all clients are synchronized
+          setTimeout(() => startSharedGamePlay(newRoomId), 1000);
         } else {
-          // Broadcast synchronized countdown to ALL players
+          // Broadcast synchronized countdown with server timestamp
           broadcastToLiveGame(newRoomId, {
             type: 'shared_game_countdown',
             countdown: timeLeft,
+            serverTime: currentTime,
+            startTime: startTime,
             playersCount: newSharedGame.players.size
           });
         }
@@ -480,12 +491,14 @@ async function handleStartMultiplayerGame(telegramId, message) {
       
       newSharedGame.countdownTimer = countdownTimer;
       
-      // Notify creator
+      // Notify creator with server time for sync
       sendToUser(telegramId, {
         type: 'shared_game_created',
         gameId: gameId,
         roomId: newRoomId,
         countdown: Math.ceil(LIVE_GAME_CONFIG.waitTime / 1000),
+        serverTime: Date.now(),
+        startTime: startTime,
         playersCount: 1
       });
       
@@ -1125,20 +1138,38 @@ function startSharedGamePlay(roomId) {
   
   console.log(`🎯 Starting shared game play in room ${roomId} with ${sharedGame.players.size} players`);
   
-  sharedGame.state = 'playing';
-  sharedGame.calledNumbers = [];
-  sharedGame.currentCall = null;
+  // CRITICAL: Set exact start time for all players
+  const gameStartTime = Date.now() + 3000; // 3 second buffer for synchronization
+  sharedGame.actualStartTime = gameStartTime;
   
-  // Notify all players that shared game is starting
+  // First, notify all players game will start with exact timestamp
   broadcastToLiveGame(roomId, {
-    type: 'shared_game_started',
+    type: 'shared_game_will_start',
     gameId: sharedGame.id,
+    startTime: gameStartTime,
+    countdown: 3,
     playersCount: sharedGame.players.size,
-    isSharedSession: true
+    serverTime: Date.now()
   });
   
-  // Start calling numbers for shared session
-  startSharedNumberCalling(roomId);
+  // Start actual gameplay after exact delay
+  setTimeout(() => {
+    sharedGame.state = 'playing';
+    sharedGame.calledNumbers = [];
+    sharedGame.currentCall = null;
+    
+    // Notify all players that shared game is starting NOW
+    broadcastToLiveGame(roomId, {
+      type: 'shared_game_started',
+      gameId: sharedGame.id,
+      exactStartTime: Date.now(),
+      playersCount: sharedGame.players.size,
+      isSharedSession: true
+    });
+    
+    // Start calling numbers for shared session
+    startSharedNumberCalling(roomId);
+  }, 3000);
 }
 
 // Handle number calling for live games

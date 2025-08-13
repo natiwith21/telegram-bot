@@ -143,18 +143,42 @@ const LikeBingo = () => {
         case 'shared_game_created':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Shared Bingo ${gameMode} created, waiting for players...`);
-            // Go to playing state immediately and show countdown in Count Down section
+            // Go to playing state immediately and show synchronized countdown
             setGameState('playing');
-            setMultiplayerCountdown(lastMessage.countdown);
+            
+            // Use server time if available for accurate sync
+            if (lastMessage.serverTime) {
+              const serverCountdown = lastMessage.countdown;
+              const serverTime = lastMessage.serverTime;
+              const clientTime = Date.now();
+              const networkDelay = Math.abs(clientTime - serverTime);
+              const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
+              setMultiplayerCountdown(adjustedCountdown);
+              console.log(`🔄 Creator countdown sync: ${adjustedCountdown}s`);
+            } else {
+              setMultiplayerCountdown(lastMessage.countdown);
+            }
           }
           break;
 
         case 'joined_shared_waiting':
           if (['10', '20', '50', '100'].includes(gameMode)) {
             console.log(`🎮 Joined shared Bingo ${gameMode} waiting room`);
-            // Go to playing state immediately and show countdown in Count Down section
+            // Go to playing state immediately and show synchronized countdown
             setGameState('playing');
-            setMultiplayerCountdown(lastMessage.countdown);
+            
+            // Use server time for accurate countdown sync
+            if (lastMessage.serverTime) {
+              const serverCountdown = lastMessage.countdown;
+              const serverTime = lastMessage.serverTime;
+              const clientTime = Date.now();
+              const networkDelay = Math.abs(clientTime - serverTime);
+              const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
+              setMultiplayerCountdown(adjustedCountdown);
+              console.log(`🔄 Initial countdown sync: ${adjustedCountdown}s (server: ${serverCountdown}s, delay: ${networkDelay}ms)`);
+            } else {
+              setMultiplayerCountdown(lastMessage.countdown);
+            }
           }
           break;
 
@@ -171,22 +195,62 @@ const LikeBingo = () => {
 
         case 'player_joined_shared_waiting':
           // Update countdown for all players to stay synchronized
-          console.log(`👥 Player joined - updating countdown to ${lastMessage.countdown}`);
-          setMultiplayerCountdown(lastMessage.countdown);
+          console.log(`👥 Player joined - syncing countdown`);
+          if (lastMessage.serverTime) {
+            const serverCountdown = lastMessage.countdown;
+            const serverTime = lastMessage.serverTime;
+            const clientTime = Date.now();
+            const networkDelay = Math.abs(clientTime - serverTime);
+            const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
+            setMultiplayerCountdown(adjustedCountdown);
+          } else {
+            setMultiplayerCountdown(lastMessage.countdown);
+          }
           break;
 
         case 'shared_game_countdown':
-          setMultiplayerCountdown(lastMessage.countdown);
+          // CRITICAL: Use server time for accurate synchronization
+          const serverCountdown = lastMessage.countdown;
+          const serverTime = lastMessage.serverTime;
+          const clientTime = Date.now();
+          const networkDelay = Math.abs(clientTime - serverTime);
+          
+          // Adjust countdown for network delay (max 2 seconds adjustment)
+          const delayAdjustment = Math.min(Math.floor(networkDelay / 1000), 2);
+          const adjustedCountdown = Math.max(0, serverCountdown - delayAdjustment);
+          
+          console.log(`🔄 Countdown sync: server=${serverCountdown}, network_delay=${networkDelay}ms, adjusted=${adjustedCountdown}`);
+          setMultiplayerCountdown(adjustedCountdown);
+          break;
+
+        case 'shared_game_will_start':
+          // Server is preparing to start game - show final countdown
+          const startTime = lastMessage.startTime;
+          const finalCountdown = Math.max(0, Math.ceil((startTime - Date.now()) / 1000));
+          console.log(`🎯 Shared game will start in ${finalCountdown} seconds`);
+          setMultiplayerCountdown(finalCountdown);
+          
+          // Set timer to transition to playing state at exact start time
+          setTimeout(() => {
+            setGameState('playing');
+            setGameStarted(true);
+            setMultiplayerCountdown(null);
+            setDrawnNumbers([]);
+            setCurrentCall(null);
+            console.log('🎯 Game state transitioned to playing (synchronized)');
+          }, startTime - Date.now());
           break;
 
         case 'shared_game_started':
-          console.log('🎯 Shared game started!');
-          setGameStarted(true);
-          setGameState('playing');
-          setMultiplayerCountdown(null);
-          // Don't call startDrawing() - numbers come from WebSocket only
-          setDrawnNumbers([]); // Reset drawn numbers for new game
-          setCurrentCall(null); // Reset current call
+          console.log('🎯 Shared game started (server confirmation)!');
+          // This is just confirmation - state should already be set by shared_game_will_start
+          if (gameState !== 'playing') {
+            setGameStarted(true);
+            setGameState('playing');
+            setMultiplayerCountdown(null);
+            setDrawnNumbers([]);
+            setCurrentCall(null);
+          }
           break;
 
         case 'shared_number_called':
