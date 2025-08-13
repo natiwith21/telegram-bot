@@ -3455,7 +3455,7 @@ app.post('/api/like-bingo-play', async (req, res) => {
 async function startBot() {
   if (process.env.NODE_ENV === 'production') {
     // Use webhooks for production (Render)
-    const WEBHOOK_URL = `https://telegram-bot-u2ni.onrender.com/webhook/${process.env.BOT_TOKEN}`;
+    const WEBHOOK_URL = `${process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL || 'https://telegram-bot-u2ni.onrender.com'}/webhook/${process.env.BOT_TOKEN}`;
     
     console.log('🔧 Setting up webhook for production...');
     console.log(`📡 Webhook URL: ${WEBHOOK_URL}`);
