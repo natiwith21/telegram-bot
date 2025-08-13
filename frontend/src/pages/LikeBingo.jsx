@@ -1252,7 +1252,7 @@ const LikeBingo = () => {
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <span style={styles.backBtn} onClick={() => navigate('/')}>✕</span>
+        <span style={styles.backBtn} onClick={() => navigate('/')}>👍</span>
         <span style={styles.title}>Like Bingo ⩔</span>
         <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
       </div>
@@ -1291,7 +1291,7 @@ const LikeBingo = () => {
             exit={{ opacity: 0, y: -10 }}
             style={styles.dropdown}
           >
-            <div onClick={() => {setStake(5); setShowMenu(false);}}>Set Stake: 5 coins</div>
+            
             <div onClick={() => {setStake(10); setShowMenu(false);}}>Set Stake: 10 coins</div>
             <div onClick={() => {setStake(20); setShowMenu(false);}}>Set Stake: 20 coins</div>
             <div onClick={() => {setSoundEnabled(!soundEnabled); setShowMenu(false);}}>
