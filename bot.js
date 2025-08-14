@@ -514,7 +514,7 @@ bot.start(async (ctx) => {
 
 ለአስደሳች የጨዋታ ልምድ ዝግጁ ይሁኑ! ቦታችን የሚያቀርበው፦
 
-🎯 **የቢንጎ ጨዋታዎች** - በብዙ የተለያዩ የተጫዋች መደቦች  
+🎯 **የቢንጎ ጨዋታዎች** - በብዙ የተለያዩ አማራጮች  
 💰 **የዋሌት ስርዓት** - ትርፎትን ይከታተሉ  
 🎁 **ቦነስ እና ሽልማቶች** - የቀን ዕድል እና አስደሳች ነገሮች  
 
@@ -562,19 +562,19 @@ bot.action('main_menu', async (ctx) => {
   const availableGames = Object.values(gameAccess).filter(game => game.available);
   const lockedGames = Object.values(gameAccess).filter(game => !game.available);
   
-  let message = `🎮 **ወደ ጨዋታ መድረክ እንኳን ደህና መጡ!**
+  let message = `🎮 **ወደ ጨዋታው መድረክ እንኳን ደህና መጡ!**
 
 💰 **Your Balance:** ${user.balance} coins
 🎁 **Bonus:** ${user.bonus} coins
 
-🎯 **Available Games(የጨዋታዎች ዝርዝር):**\n`;
+🎯 **Available Games:**\n`;
   
   availableGames.forEach(game => {
     message += `✅ ${game.name} ${game.cost > 0 ? `(${game.cost} coins)` : '(Free)'}\n`;
   });
   
   if (lockedGames.length > 0) {
-    message += `\n🔒 **Locked Games(የተቆለፉ ጨዋታዎች):**\n`;
+    message += `\n🔒 **Locked Games:**\n`;
     lockedGames.forEach(game => {
       const needed = game.cost - user.balance;
       message += `❌ ${game.name} - Need ${needed} more coins\n`;
