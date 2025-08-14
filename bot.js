@@ -488,15 +488,15 @@ bot.start(async (ctx) => {
     const newUserId = ctx.from.id.toString();
     
     let welcomeMessage = `
-🎮 **Welcome to Bingo Bot!**
+🎮 **ወደ Likebingo ቦት እንኳን ደህና መጡ!**
 
-Get ready for an exciting gaming experience! Our bot offers:
+ለአስደሳች የጨዋታ ልምድ ዝግጁ ይሁኑ! ቦታችን የሚያቀርበው፦
 
-🎯 **Bingo Games** - Multiple betting levels
-💰 **Wallet System** - Track your earnings
-🎁 **Bonuses & Rewards** - Daily surprises
+🎯 **የቢንጎ ጨዋታዎች** - በብዙ የተለያዩ የተጫዋች መደቦች  
+💰 **የዋሌት ስርዓት** - ትርፎትን ይከታተሉ  
+🎁 **ቦነስ እና ሽልማቶች** - የቀን ዕድል እና አስደሳች ነገሮች  
 
-Ready to start your adventure? Click the button below!
+ለመጀመር ዝግጁ ነዎት? ከታች ያለውን አዝራር ይጫኑ!
     `;
     
     // Handle referral if present
@@ -562,19 +562,19 @@ bot.action('main_menu', async (ctx) => {
   const availableGames = Object.values(gameAccess).filter(game => game.available);
   const lockedGames = Object.values(gameAccess).filter(game => !game.available);
   
-  let message = `🎮 **ወደ የጨዋታ መድረክ እንኳን ደህና መጡ!**
+  let message = `🎮 **ወደ ጨዋታ መድረክ እንኳን ደህና መጡ!**
 
 💰 **Your Balance:** ${user.balance} coins
 🎁 **Bonus:** ${user.bonus} coins
 
-🎯 **Available Games:**\n`;
+🎯 **Available Games(የጨዋታዎች ዝርዝር):**\n`;
   
   availableGames.forEach(game => {
     message += `✅ ${game.name} ${game.cost > 0 ? `(${game.cost} coins)` : '(Free)'}\n`;
   });
   
   if (lockedGames.length > 0) {
-    message += `\n🔒 **Locked Games:**\n`;
+    message += `\n🔒 **Locked Games(የተቆለፉ ጨዋታዎች):**\n`;
     lockedGames.forEach(game => {
       const needed = game.cost - user.balance;
       message += `❌ ${game.name} - Need ${needed} more coins\n`;
@@ -602,7 +602,7 @@ async function checkUserRegistration(ctx, callback) {
   
   if (!user) {
     await ctx.editMessageText(
-      '📝 **Registration Required**\n\nTo complete your registration, please click the button below to share your phone number.',
+      '📝 **Registration Required(መመዝገብ ያስፈልጋል)**\n\nመመዝገብዎን ለማጠናቀቅ እባክዎ ከታች ያለውን ቁልፍ በመጫን ስልክ ቁጥርዎን ያጋሩ።',
       {
         parse_mode: 'Markdown',
         reply_markup: Markup.inlineKeyboard([
