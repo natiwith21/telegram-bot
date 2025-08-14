@@ -508,21 +508,18 @@ Ready to start your adventure? Click the button below!
         
         if (referrer && !newUser) {
           welcomeMessage = `
-🎮 **Welcome to Bingo Bot!**
+🎮 **ወደ Likebingo ቦት እንኳን ደህና መጡ!**
 
-🎉 You were invited by ${referrer.name}! 
+🎉 በ${referrer.name} ተጋብዘዋል! 
 
-When you register, both you and your friend will receive bonus rewards:
-• You get: **50 bonus coins**
-• ${referrer.name} gets: **25 bonus coins**
+ለአስደሳች የጨዋታ ልምድ ዝግጁ ይሁኑ! ቦታችን የሚያቀርበው፦
 
-Get ready for an exciting gaming experience! Our bot offers:
+🎯 **የቢንጎ ጨዋታዎች** - በብዙ የተለያዩ የተጫዋች መደቦች  
+💰 **የዋሌት ስርዓት** - ትርፎትን ይከታተሉ  
+🎁 **ቦነስ እና ሽልማቶች** - የቀን ዕድል እና አስደሳች ነገሮች  
 
-🎯 **Bingo Games** - Multiple betting levels
-💰 **Wallet System** - Track your earnings
-🎁 **Bonuses & Rewards** - Daily surprises
+ለመጀመር ዝግጁ ነዎት? ከታች ያለውን ማስጀመርያ ይጫኑ!
 
-Ready to start your adventure? Click the button below!
           `;
           
           // Store referral info temporarily (will be processed during registration)
@@ -565,7 +562,7 @@ bot.action('main_menu', async (ctx) => {
   const availableGames = Object.values(gameAccess).filter(game => game.available);
   const lockedGames = Object.values(gameAccess).filter(game => !game.available);
   
-  let message = `🎮 **Welcome to the Gaming Platform!**
+  let message = `🎮 **ወደ የጨዋታ መድረክ እንኳን ደህና መጡ!**
 
 💰 **Your Balance:** ${user.balance} coins
 🎁 **Bonus:** ${user.bonus} coins
