@@ -1965,9 +1965,10 @@ bot.action('deposit_manual', async (ctx) => {
   
   const message = `🟡 **Manual Deposit**\n\n` +
     `Please enter the amount you wish to deposit in Ethiopian Birr (ETB).\n\n` +
-    `💡 **Minimum:** 50 ETB\n` +
-    `💡 **Maximum:** 10,000 ETB\n\n` +
-    `📝 **Example:** 100`;
+    `እባክዎ ወደ አካውንቶ ማስገባት የሚፈልጉትን መጠን ብር (ETB) ቁጥር ያስገቡ።\n\n` +
+    `💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB\n` +
+    `💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB\n\n` +
+    `📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲ ያስገቡ:** 100`;
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback('💰 Check Balance', 'balance')],
@@ -1998,6 +1999,7 @@ bot.on('text', async (ctx) => {
       await ctx.reply(
         `❌ **Invalid Amount**\n\n` +
         `The minimum deposit amount is 50 ETB. Please try again.\n\n` +
+        `ማስገባት ሚችሉት ጥንሹ መጠን 50 ETB ነው። እባክዎ ድጋሚ ይሞክሩ።\n\n` +
         `📝 **Example:** 100`,
         { parse_mode: 'Markdown' }
       );
@@ -2024,8 +2026,8 @@ bot.on('text', async (ctx) => {
       `Please choose your payment method:`;
 
     const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback('🔵 Pay from CBE Bank to CBE Bank only', 'payment_cbe')],
-      [Markup.button.callback('🟡 Pay from Telebirr to Telebirr only', 'payment_telebirr')],
+      [Markup.button.callback('💸 Pay from CBE Bank to CBE Bank only', 'payment_cbe')],
+      [Markup.button.callback('💸 Pay from Telebirr to Telebirr only', 'payment_telebirr')],
       [Markup.button.callback('💰 Check Balance', 'balance')],
       [Markup.button.callback('📞 Contact Support', 'support')],
       [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
@@ -2082,6 +2084,7 @@ bot.on('text', async (ctx) => {
     // Enhanced user confirmation
     await ctx.reply(
       `✅ **Payment Details Submitted Successfully!**
+       ✅ **ክፍያዎ በተሳካ ሁኔታ ተልከዋል!!**
 
 📱 Your payment details have been sent to our verification team.
 ⏱️ **Processing Time:** 5-15 minutes
@@ -2204,15 +2207,16 @@ bot.action('payment_cbe', async (ctx) => {
   const message = `🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት**\n` +
     `➡️ \`${PAYMENT_CONFIG.bankAccount}\`\n\n` +
     `📌 **Instructions:**\n` +
-    `1. Deposit at least ${Math.max(amount, 60)} ETB to the above CBE account.\n` +
-    `2. Make sure the amount you send matches the amount you entered earlier (${amount} ETB).\n` +
-    `3. After sending the money, you will receive a confirmation SMS from CBE.\n` +
-    `4. Copy the full SMS and paste it below in the Telegram message box.\n\n` +
-    `📢 **Notes:**\n` +
-    `- Only send to the above **CBE account**. If you send to a different agent's account, 2% will be deducted before crediting.\n` +
-    `- If you face any issues, contact:\n` +
+    `1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
+    `2. የምትልኩት የገንዘብ መጠን እና እዚ ላይ እንዲሞላልዎ የምታስገቡት የብር መጠን ተመሳሳይ መሆኑን እርግጠኛ ይሁኑ (${amount} ETB).\n` +
+    `3. ብሩን ስትልኩ የከፈላችሁበትን መረጃ የያዝ አጭር የጹሁፍ መልክት(sms) ከኢትዮጵያ ንግድ ባንክ ይደርሳችኋል\n` +
+    `4. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት\n` +
+    `5. ብር ስትልኩ የምትጠቀሙት USSD(889) ከሆነ አንዳንዴ አጭር የጹሁፍ መለክት(sms) ላይገባላቹ ስለሚችል ከUSSD(889) ሂደት መጨረሻ ላይ Complete የሚለው ላይ ስደርሱ 3 ቁጥርን በመጫን የትራንዛክሽን ቁጥሩን ሲያሳያቹህ ትራንዛክሽን ቁጥሩን ጽፎ ማስቀመጥ ይኖርባችኋል\n\n` +
+    `📢 **ማሳሰቢያ:**\n` +
+    `- አጭር የጹሁፍ መለክት(sms) ካልደረሳቹ ያለትራንዛክሽን ቁጥር ሲስተሙ ዋሌት ስለማይሞላላቹ የከፈላችሁበትን ደረሰኝ ከባንክ በመቀበል በማንኛውም ሰአት ትራንዛክሽን ቁጥሩን ቦቱ ላይ ማስገባት ትችላላቹ \n` +
+    `- የሚያጋጥማቹ የክፍያ ችግር ካለ, በዚ ኤጀንቱን ማዋራት ይችላሉ:\n` +
     `  - 🛠 @nati280 (support)\n\n` +
-    `✍️ **Now, please paste the full SMS here:**\n` +
+    `✍️ **የከፈለችሁበትን አጭር የጹሁፍ መለክት(sms) ወይም FT ብሎ የሚጀምረዉን የትራንዛክሽን ቁጥር እዚ ላይ ያስገቡት**\n` +
     `👇👇👇`;
 
   const keyboard = Markup.inlineKeyboard([
@@ -2238,15 +2242,14 @@ bot.action('payment_telebirr', async (ctx) => {
   const message = `📱 **የቴሌብር አካውንት**\n` +
     `➡️ \`${PAYMENT_CONFIG.agentPhone}\`\n\n` +
     `📌 **Instructions:**\n` +
-    `1. Deposit at least ${Math.max(amount, 70)} ETB to the above Telebirr number.\n` + // Ensure min 70 ETB
-    `2. Make sure the amount you send matches the amount you entered earlier (${amount} ETB).\n` +
-    `3. After sending, you will receive an SMS from Telebirr.\n` +
-    `4. Copy the full SMS and paste it below in the Telegram message box.\n\n` +
-    `📢 **Notes:**\n` +
-    `- Only send to the above **Telebirr account**. If you send to a different agent, 2% will be deducted before crediting.\n` +
-    `- If you face any issues, contact:\n` +
+    `1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ.\n` + // Ensure min 50 ETB
+    `2. የምትልኩት የገንዘብ መጠን እና እዚ ላይ እንዲሞላልዎ የምታስገቡት የብር መጠን ተመሳሳይ መሆኑን እርግጠኛ ይሁኑ (${amount} ETB).\n` +
+    `3. ብሩን ስትልኩ የከፈላችሁበትን መረጃ የያዝ አጭር የጹሁፍ መልክት(sms) ከቴሌብር ይደርሳችኋል\n` +
+    `4. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት\n\n` +
+    
+    `- የሚያጋጥማቹ የክፍያ ችግር ካለ, በዚ ኤጀንቱን ማዋራት ይችላሉ:\n` +
     `  - 🛠 @nati280 (support)\n\n` +
-    `✍️ **Now, please paste the full SMS here:**\n` +
+    `✍️ **የከፈለችሁበትን አጭር የጹሁፍ መለክት(sms) እዚ ላይ ያስገቡት :**\n` +
     `👇👇👇`;
 
   const keyboard = Markup.inlineKeyboard([
