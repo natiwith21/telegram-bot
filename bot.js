@@ -770,7 +770,7 @@ function isAdmin(telegramId) {
 
 // Bingo game modes
 bot.action('bingo_demo', async (ctx) => {
-  // Demo mode - instant access
+  // Demo mode - instant access, go directly to mini app
   const sessionToken = generateSessionToken();
   const telegramId = ctx.from.id.toString();
   
@@ -783,11 +783,13 @@ bot.action('bingo_demo', async (ctx) => {
   });
   await session.save();
   
-  await ctx.editMessageText(`🎮 **Free Bingo Demo**\n\nNo payment required! Practice and learn how to play Bingo.\n\n🔗 **Direct Links:**\n• Desktop: ${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}\n• Mobile: Open link below`, {
+  // DIRECTLY launch the mini app for demo
+  await ctx.answerCbQuery(`🎮 Opening Bingo Demo...`);
+  
+  await ctx.editMessageText(`🎮 **Bingo Demo Game**\n\n🚀 Opening demo game in mini app...`, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.url('🎮 Play Demo (Browser)', `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)],
-      [Markup.button.webApp(`🎮 Mini App`, `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)],
+      [Markup.button.webApp(`🎮 Play Demo`, `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)],
       [Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]
     ]).reply_markup
   });
@@ -846,10 +848,7 @@ paidBingoModes.forEach(mode => {
         return;
       }
       
-      // User has sufficient balance - create game session WITHOUT deducting cost yet
-      // Cost will be deducted only when the game ends (win/loss)
-      
-      // Create game session
+      // User has sufficient balance - create game session and go DIRECTLY to mini app
       const sessionToken = generateSessionToken();
       const session = new GameSession({
         telegramId,
@@ -861,16 +860,15 @@ paidBingoModes.forEach(mode => {
       });
       await session.save();
       
+      // DIRECTLY launch the mini app without intermediate message
+      await ctx.answerCbQuery(`🎮 Opening Bingo ${gameMode}...`);
+      
+      // Send mini app directly
       await ctx.editMessageText(
-        `🎮 Bingo ${gameMode} - Ready to Play!\n\n` +
-        `💰 Entry Cost: ${config.cost} coins (will be deducted on game end)\n` +
-        `🏆 Potential Winnings: ${config.winnings} coins\n` +
-        `💼 Current Balance: ${user.balance} coins\n\n` +
-        `🎯 Good luck! Choose how to play:`,
+        `🎮 **Bingo ${gameMode} Game**\n\n🚀 Opening game in mini app...`,
         {
           reply_markup: Markup.inlineKeyboard([
-            [Markup.button.url('🌐 Browser Game', `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)],
-            [Markup.button.webApp(`📱 Mini App`, `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)],
+            [Markup.button.webApp(`🎮 Play Bingo ${gameMode}`, `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)],
             [Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]
           ]).reply_markup
         }
