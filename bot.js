@@ -770,7 +770,7 @@ function isAdmin(telegramId) {
 
 // Bingo game modes
 bot.action('bingo_demo', async (ctx) => {
-  // Demo mode - instant access, go directly to mini app
+  // Demo mode - instant access, launch mini app IMMEDIATELY
   const sessionToken = generateSessionToken();
   const telegramId = ctx.from.id.toString();
   
@@ -783,15 +783,10 @@ bot.action('bingo_demo', async (ctx) => {
   });
   await session.save();
   
-  // DIRECTLY launch the mini app for demo
-  await ctx.answerCbQuery(`🎮 Opening Bingo Demo...`);
-  
-  await ctx.editMessageText(`🎮 **Bingo Demo Game**\n\n🚀 Opening demo game in mini app...`, {
-    parse_mode: 'Markdown',
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.webApp(`🎮 Play Demo`, `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)],
-      [Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]
-    ]).reply_markup
+  // DIRECTLY launch the mini app with no intermediate screens
+  await ctx.answerCbQuery('🎮 Launching demo...', {
+    url: `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`,
+    show_alert: false
   });
 });
 
@@ -848,7 +843,7 @@ paidBingoModes.forEach(mode => {
         return;
       }
       
-      // User has sufficient balance - create game session and go DIRECTLY to mini app
+      // User has sufficient balance - create game session and launch mini app IMMEDIATELY
       const sessionToken = generateSessionToken();
       const session = new GameSession({
         telegramId,
@@ -860,19 +855,11 @@ paidBingoModes.forEach(mode => {
       });
       await session.save();
       
-      // DIRECTLY launch the mini app without intermediate message
-      await ctx.answerCbQuery(`🎮 Opening Bingo ${gameMode}...`);
-      
-      // Send mini app directly
-      await ctx.editMessageText(
-        `🎮 **Bingo ${gameMode} Game**\n\n🚀 Opening game in mini app...`,
-        {
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.webApp(`🎮 Play Bingo ${gameMode}`, `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)],
-            [Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]
-          ]).reply_markup
-        }
-      );
+      // DIRECTLY launch the mini app with no intermediate screens
+      await ctx.answerCbQuery('🎮 Launching game...', {
+        url: `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`,
+        show_alert: false
+      });
       
     } catch (error) {
       console.error('Error in paid bingo mode:', error);
