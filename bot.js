@@ -354,11 +354,11 @@ const mainMenuKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('👥 Invite', 'invite'), Markup.button.callback('📞 Contact Support', 'support')],
 ]);
 
-// Bingo game modes keyboard
+// Bingo game modes keyboard - Direct webApp buttons
 const bingoModesKeyboard = Markup.inlineKeyboard([
-  [Markup.button.callback('🎯 Play Bingo 10', 'bingo_10'), Markup.button.callback('🎯 Play Bingo 20', 'bingo_20')],
-  [Markup.button.callback('🎯 Play Bingo 50', 'bingo_50'), Markup.button.callback('🎯 Play Bingo 100', 'bingo_100')],
-  [Markup.button.callback('🎯 Play Bingo Demo', 'bingo_demo')],
+  [Markup.button.webApp('🎯 Play Bingo 10', `${process.env.WEB_APP_URL}/like-bingo?mode=10`), Markup.button.webApp('🎯 Play Bingo 20', `${process.env.WEB_APP_URL}/like-bingo?mode=20`)],
+  [Markup.button.webApp('🎯 Play Bingo 50', `${process.env.WEB_APP_URL}/like-bingo?mode=50`), Markup.button.webApp('🎯 Play Bingo 100', `${process.env.WEB_APP_URL}/like-bingo?mode=100`)],
+  [Markup.button.webApp('🎯 Play Bingo Demo', `${process.env.WEB_APP_URL}/like-bingo?mode=demo`)],
   [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
 ]);
 
