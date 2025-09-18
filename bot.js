@@ -770,7 +770,7 @@ function isAdmin(telegramId) {
 
 // Bingo game modes
 bot.action('bingo_demo', async (ctx) => {
-  // Demo mode - instant access, launch mini app IMMEDIATELY
+  // Demo mode - instant access, show ONLY the mini app button
   const sessionToken = generateSessionToken();
   const telegramId = ctx.from.id.toString();
   
@@ -783,10 +783,11 @@ bot.action('bingo_demo', async (ctx) => {
   });
   await session.save();
   
-  // DIRECTLY launch the mini app with no intermediate screens
-  await ctx.answerCbQuery('🎮 Launching demo...', {
-    url: `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`,
-    show_alert: false
+  // Show ONLY the mini app button - no intermediate text or messages
+  await ctx.editMessageText(`🎮 Bingo Demo`, {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.webApp(`🎮 Play Demo`, `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)]
+    ]).reply_markup
   });
 });
 
@@ -843,7 +844,7 @@ paidBingoModes.forEach(mode => {
         return;
       }
       
-      // User has sufficient balance - create game session and launch mini app IMMEDIATELY
+      // User has sufficient balance - create game session and show ONLY the mini app button
       const sessionToken = generateSessionToken();
       const session = new GameSession({
         telegramId,
@@ -855,10 +856,11 @@ paidBingoModes.forEach(mode => {
       });
       await session.save();
       
-      // DIRECTLY launch the mini app with no intermediate screens
-      await ctx.answerCbQuery('🎮 Launching game...', {
-        url: `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`,
-        show_alert: false
+      // Show ONLY the mini app button - no intermediate text or messages
+      await ctx.editMessageText(`🎮 Bingo ${gameMode}`, {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.webApp(`🎮 Play Bingo ${gameMode}`, `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)]
+        ]).reply_markup
       });
       
     } catch (error) {
