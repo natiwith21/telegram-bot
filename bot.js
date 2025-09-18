@@ -348,22 +348,16 @@ if (ADMIN_IDS.length === 0) {
 
 // Main menu keyboard
 const mainMenuKeyboard = Markup.inlineKeyboard([
-  [Markup.button.callback('🎯 Play Bingo', 'play_bingo')],
-  [Markup.button.callback('📝 Register', 'register')],
-  [Markup.button.callback('💰 Deposit', 'deposit')],
-  [Markup.button.callback('🏧 Withdraw', 'withdraw')],
-  [Markup.button.callback('💳 Check Balance', 'balance')],
-  [Markup.button.callback('🎮 Instructions', 'instructions')],
-  [Markup.button.callback('👥 Invite', 'invite')],
-  [Markup.button.callback('📞 Contact Support', 'support')],
+  [Markup.button.callback('🎯 Play Bingo', 'play_bingo'), Markup.button.callback('📝 Register', 'register')],
+  [Markup.button.callback('💰 Deposit', 'deposit'), Markup.button.callback('🏧 Withdraw', 'withdraw')],
+  [Markup.button.callback('💳 Check Balance', 'balance'), Markup.button.callback('🎮 Instructions', 'instructions')],
+  [Markup.button.callback('👥 Invite', 'invite'), Markup.button.callback('📞 Contact Support', 'support')],
 ]);
 
 // Bingo game modes keyboard
 const bingoModesKeyboard = Markup.inlineKeyboard([
-  [Markup.button.callback('🎯 Play Bingo 10', 'bingo_10')],
-  [Markup.button.callback('🎯 Play Bingo 20', 'bingo_20')],
-  [Markup.button.callback('🎯 Play Bingo 50', 'bingo_50')],
-  [Markup.button.callback('🎯 Play Bingo 100', 'bingo_100')],
+  [Markup.button.callback('🎯 Play Bingo 10', 'bingo_10'), Markup.button.callback('🎯 Play Bingo 20', 'bingo_20')],
+  [Markup.button.callback('🎯 Play Bingo 50', 'bingo_50'), Markup.button.callback('🎯 Play Bingo 100', 'bingo_100')],
   [Markup.button.callback('🎯 Play Bingo Demo', 'bingo_demo')],
   [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
 ]);
@@ -496,7 +490,7 @@ bot.start(async (ctx) => {
 💰 **የዋሌት ስርዓት** - ትርፎትን ይከታተሉ  
 🎁 **ቦነስ እና ሽልማቶች** - የቀን ዕድል እና አስደሳች ነገሮች  
 
-ለመጀመር ዝግጁ ነዎት? ከታች ያለውን አዝራር ይጫኑ!
+**Welcome to Like Bingo! Choose an option below.**
     `;
     
     // Handle referral if present
@@ -518,7 +512,7 @@ bot.start(async (ctx) => {
 💰 **የዋሌት ስርዓት** - ትርፎትን ይከታተሉ  
 🎁 **ቦነስ እና ሽልማቶች** - የቀን ዕድል እና አስደሳች ነገሮች  
 
-ለመጀመር ዝግጁ ነዎት? ከታች ያለውን ማስጀመርያ ይጫኑ!
+**Welcome to Like Bingo! Choose an option below.**
 
           `;
           
@@ -531,9 +525,8 @@ bot.start(async (ctx) => {
       }
     }
     
-    await ctx.replyWithMarkdown(welcomeMessage, Markup.inlineKeyboard([
-      [Markup.button.callback('🚀 Start Playing', 'main_menu')]
-    ]));
+    // Show main menu options directly in welcome message
+    await ctx.replyWithMarkdown(welcomeMessage, mainMenuKeyboard);
   } catch (error) {
     console.log('Start command error:', error.message);
     // Don't crash, just log the error
@@ -586,10 +579,8 @@ bot.action('main_menu', async (ctx) => {
   await ctx.editMessageText(message, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('🎮 Play Bingo', 'play_bingo')],
-      [Markup.button.callback('💰 Deposit', 'deposit')],
-      [Markup.button.callback('🏧 Withdraw', 'withdraw')],
-      [Markup.button.callback('💳 Check Balance', 'balance')],
+      [Markup.button.callback('🎮 Play Bingo', 'play_bingo'), Markup.button.callback('💰 Deposit', 'deposit')],
+      [Markup.button.callback('🏧 Withdraw', 'withdraw'), Markup.button.callback('💳 Check Balance', 'balance')],
       [Markup.button.callback('📞 Support', 'support')]
     ]).reply_markup
   });
