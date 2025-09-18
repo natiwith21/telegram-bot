@@ -525,8 +525,15 @@ bot.start(async (ctx) => {
       }
     }
     
-    // Show main menu options directly in welcome message
-    await ctx.replyWithMarkdown(welcomeMessage, mainMenuKeyboard);
+    // Send welcome image with message and menu options
+    await ctx.replyWithPhoto(
+      { url: `${process.env.WEB_APP_URL}/images/Welcome-like.png` }, // Using local image from frontend/public/images/
+      {
+        caption: welcomeMessage,
+        parse_mode: 'Markdown',
+        reply_markup: mainMenuKeyboard.reply_markup
+      }
+    );
   } catch (error) {
     console.log('Start command error:', error.message);
     // Don't crash, just log the error
