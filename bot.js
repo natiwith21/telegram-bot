@@ -481,17 +481,9 @@ bot.start(async (ctx) => {
     const startPayload = ctx.message.text.split(' ')[1]; // Get referral ID if present
     const newUserId = ctx.from.id.toString();
     
-    let welcomeMessage = `
-🎮 **ወደ Likebingo ቦት እንኳን ደህና መጡ!**
+    let welcomeMessage = `🎮 **ወደ Likebingo ቦት እንኳን ደህና መጡ!**
 
-ለአስደሳች የጨዋታ ልምድ ዝግጁ ይሁኑ! ቦታችን የሚያቀርበው፦
-
-🎯 **የቢንጎ ጨዋታዎች** - በብዙ የተለያዩ የተጫዋች መደቦች  
-💰 **የዋሌት ስርዓት** - ትርፎትን ይከታተሉ  
-🎁 **ቦነስ እና ሽልማቶች** - የቀን ዕድል እና አስደሳች ነገሮች  
-
-**Welcome to Like Bingo! Choose an option below.**
-    `;
+**Welcome to Likebingo! Choose an option below.**`;
     
     // Handle referral if present
     if (startPayload && startPayload !== newUserId) {
@@ -501,20 +493,11 @@ bot.start(async (ctx) => {
         const newUser = await User.findOne({ telegramId: newUserId });
         
         if (referrer && !newUser) {
-          welcomeMessage = `
-🎮 **ወደ Likebingo ቦት እንኳን ደህና መጡ!**
+          welcomeMessage = `🎮 **ወደ Likebingo ቦት እንኳን ደህና መጡ!**
 
 🎉 በ${referrer.name} ተጋብዘዋል! 
 
-ለአስደሳች የጨዋታ ልምድ ዝግጁ ይሁኑ! ቦታችን የሚያቀርበው፦
-
-🎯 **የቢንጎ ጨዋታዎች** - በብዙ የተለያዩ አማራጮች  
-💰 **የዋሌት ስርዓት** - ትርፎትን ይከታተሉ  
-🎁 **ቦነስ እና ሽልማቶች** - የቀን ዕድል እና አስደሳች ነገሮች  
-
-**Welcome to Like Bingo! Choose an option below.**
-
-          `;
+**Welcome to Likebingo! Choose an option below.**`;
           
           // Store referral info temporarily (will be processed during registration)
           ctx.session = ctx.session || {};
@@ -525,8 +508,24 @@ bot.start(async (ctx) => {
       }
     }
     
-    // Show main menu options directly in welcome message
-    await ctx.replyWithMarkdown(welcomeMessage, mainMenuKeyboard);
+    // Try sending welcome image with the correct path
+    try {
+      await ctx.replyWithPhoto(
+        { source: "assets/welcome-like.jpg" },
+        {
+          caption: welcomeMessage,
+          parse_mode: 'Markdown',
+          reply_markup: mainMenuKeyboard.reply_markup
+        }
+      );
+    } catch (imageError) {
+      console.log('Image send failed, sending text only:', imageError.message);
+      // Fallback to text-only message if image fails
+      await ctx.reply(welcomeMessage, {
+        parse_mode: 'Markdown',
+        reply_markup: mainMenuKeyboard.reply_markup
+      });
+    }
   } catch (error) {
     console.log('Start command error:', error.message);
     // Don't crash, just log the error
