@@ -488,7 +488,6 @@ bot.start(async (ctx) => {
     // Handle referral if present
     if (startPayload && startPayload !== newUserId) {
       try {
-        // Check if referred user exists and if referrer exists
         const referrer = await User.findOne({ telegramId: startPayload });
         const newUser = await User.findOne({ telegramId: newUserId });
         
@@ -498,8 +497,7 @@ bot.start(async (ctx) => {
 🎉 በ${referrer.name} ተጋብዘዋል! 
 
 **Welcome to Likebingo! Choose an option below.**`;
-          
-          // Store referral info temporarily (will be processed during registration)
+
           ctx.session = ctx.session || {};
           ctx.session.referredBy = startPayload;
         }
@@ -507,30 +505,28 @@ bot.start(async (ctx) => {
         console.log('Referral processing error:', error.message);
       }
     }
-    
-    // Try sending welcome image with the correct path
-    try {
-      await ctx.replyWithPhoto(
-        { source: "assets/welcome-like.jpg" },
-        {
-          caption: welcomeMessage,
-          parse_mode: 'Markdown',
-          reply_markup: mainMenuKeyboard.reply_markup
-        }
-      );
-    } catch (imageError) {
-      console.log('Image send failed, sending text only:', imageError.message);
-      // Fallback to text-only message if image fails
-      await ctx.reply(welcomeMessage, {
-        parse_mode: 'Markdown',
-        reply_markup: mainMenuKeyboard.reply_markup
-      });
-    }
+
+    // Always send welcome image with caption + buttons
+    await ctx.replyWithPhoto(
+      { source: "assets/welcome-like.jpg" }, // Local image
+      {
+        caption: welcomeMessage,
+        parse_mode: "Markdown",
+        reply_markup: mainMenuKeyboard.reply_markup,
+      }
+    );
+
   } catch (error) {
-    console.log('Start command error:', error.message);
-    // Don't crash, just log the error
+    console.log("Start command error:", error.message);
+
+    // Fallback to text-only message if image fails
+    await ctx.reply(welcomeMessage, {
+      parse_mode: "Markdown",
+      reply_markup: mainMenuKeyboard.reply_markup,
+    });
   }
 });
+
 
 // Main menu action
 bot.action('main_menu', async (ctx) => {
