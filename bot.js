@@ -598,7 +598,7 @@ async function checkUserRegistration(ctx, callback) {
   const user = await User.findOne({ telegramId });
   
   if (!user) {
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       '📝 **Registration Required(መመዝገብ ያስፈልጋል)**\n\nመመዝገብዎን ለማጠናቀቅ እባክዎ ከታች ያለውን ቁልፍ በመጫን ስልክ ቁጥርዎን ያጋሩ።',
       {
         parse_mode: 'Markdown',
@@ -646,7 +646,7 @@ bot.action('like_bingo', async (ctx) => {
     
     const hasInsufficientFunds = user.balance < 10; // Minimum stake is 10
     
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `🎮 **Like Bingo - Mobile Gaming Experience**\n\n` +
       `💰 Current Balance: ${user.balance} coins\n` +
       `🎁 Bonus Points: ${user.bonus}\n` +
@@ -689,7 +689,7 @@ bot.action('likebingo_refresh', async (ctx) => {
   const hasInsufficientFunds = user.balance < 10;
   const interface = await createLikeBingoInterface(ctx, user.balance, user.bonus, hasInsufficientFunds);
   
-  await ctx.editMessageText(interface.text, {
+  await safeEditMessage(ctx, interface.text, {
     parse_mode: 'Markdown',
     reply_markup: interface.keyboard.reply_markup
   });
@@ -713,7 +713,7 @@ bot.action('likebingo_start', async (ctx) => {
   
   // Refresh interface with current balance (unchanged)
   const interface = await createLikeBingoInterface(ctx, user.balance, user.bonus, false);
-  await ctx.editMessageText(interface.text, {
+  await safeEditMessage(ctx, interface.text, {
     parse_mode: 'Markdown', 
     reply_markup: interface.keyboard.reply_markup
   });
@@ -790,7 +790,7 @@ bot.action('bingo_demo', async (ctx) => {
   await session.save();
   
   // Show ONLY the mini app button - no intermediate text or messages
-  await ctx.editMessageText(`🎮 Bingo Demo`, {
+  await safeEditMessage(ctx, `🎮 Bingo Demo`, {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.webApp(`🎮 Play Demo`, `${process.env.WEB_APP_URL}/like-bingo?mode=demo&token=${sessionToken}`)]
     ]).reply_markup
@@ -831,7 +831,7 @@ paidBingoModes.forEach(mode => {
         });
         await session.save();
         
-        await ctx.editMessageText(
+        await safeEditMessage(ctx,
           `💰 Bingo ${gameMode}\n\n` +
           `🎯 Entry Cost: ${config.cost} coins\n` +
           `💰 Your Balance: ${user.balance} coins\n` +
@@ -863,7 +863,7 @@ paidBingoModes.forEach(mode => {
       await session.save();
       
       // Show ONLY the mini app button - no intermediate text or messages
-      await ctx.editMessageText(`🎮 Bingo ${gameMode}`, {
+      await safeEditMessage(ctx, `🎮 Bingo ${gameMode}`, {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.webApp(`🎮 Play Bingo ${gameMode}`, `${process.env.WEB_APP_URL}/like-bingo?mode=${gameMode}&token=${sessionToken}`)]
         ]).reply_markup
@@ -896,7 +896,7 @@ bot.action(/paid_(\d+)/, async (ctx) => {
     });
     
     if (existingPayment) {
-      await ctx.editMessageText(
+      await safeEditMessage(ctx,
         `⏳ **Payment Already Submitted**\n\n` +
         `You already have a payment request for Bingo ${gameMode} that is being processed.\n\n` +
         `📅 Submitted: ${existingPayment.createdAt.toLocaleString()}\n` +
@@ -928,7 +928,7 @@ bot.action(/paid_(\d+)/, async (ctx) => {
     await payment.save();
     
     // Notify user
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `✅ **Payment Confirmed!**\n\n` +
       `Thank you for confirming your payment of ${config.amount} Birr for Bingo ${gameMode}.\n\n` +
       `🔍 **Our team is now verifying your payment...**\n\n` +
@@ -1038,7 +1038,7 @@ bot.action(/status_(\d+)/, async (ctx) => {
   buttons.push([Markup.button.callback('🔄 Refresh', `status_${gameMode}`)]);
   buttons.push([Markup.button.callback('⬅️ Back to Bingo', 'play_bingo')]);
   
-  await ctx.editMessageText(statusMessage, {
+  await safeEditMessage(ctx, statusMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard(buttons).reply_markup
   });
@@ -1121,7 +1121,7 @@ You can now access your game! Click the button below to start playing.
     }
     
     // Update admin message
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `✅ **Payment Verified Successfully**\n\n` +
       `Payment ID: ${payment._id.toString().substr(-8)}\n` +
       `User: ${user.name}\n` +
@@ -1211,7 +1211,7 @@ Please contact support if you believe this is an error.
     }
     
     // Update admin message
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `❌ **Payment Rejected**\n\n` +
       `Payment ID: ${payment._id.toString().substr(-8)}\n` +
       `User: ${user.name}\n` +
@@ -1918,7 +1918,7 @@ bot.action('deposit_manual', async (ctx) => {
   try {
     const user = await User.findOne({ telegramId: userId });
     if (!user) {
-      await ctx.editMessageText(
+      await safeEditMessage(ctx,
         `❌ **Registration Required**\n\n` +
         `You need to register first before making deposits.\n\n` +
         `📝 **To register:**\n` +
@@ -1936,7 +1936,7 @@ bot.action('deposit_manual', async (ctx) => {
     }
   } catch (error) {
     console.error('Error checking user registration:', error);
-    await ctx.editMessageText('❌ Error checking registration. Please try again.');
+    await safeEditMessage(ctx, '❌ Error checking registration. Please try again.');
     return;
   }
   
@@ -1960,7 +1960,7 @@ bot.action('deposit_manual', async (ctx) => {
     [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
   ]);
 
-  await ctx.editMessageText(message, {
+  await safeEditMessage(ctx, message, {
     parse_mode: 'Markdown',
     reply_markup: keyboard.reply_markup
   });
@@ -2209,7 +2209,7 @@ bot.action('payment_cbe', async (ctx) => {
     [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
   ]);
 
-  await ctx.editMessageText(message, {
+  await safeEditMessage(ctx, message, {
     parse_mode: 'Markdown',
     reply_markup: keyboard.reply_markup
   });
@@ -2242,7 +2242,7 @@ bot.action('payment_telebirr', async (ctx) => {
     [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
   ]);
 
-  await ctx.editMessageText(message, {
+  await safeEditMessage(ctx, message, {
     parse_mode: 'Markdown',
     reply_markup: keyboard.reply_markup
   });
@@ -3006,7 +3006,7 @@ bot.action('balance', async (ctx) => {
   
   message += `\n💡 **To unlock more games:** Use /deposit to add coins to your wallet!`;
   
-  await ctx.editMessageText(message, {
+  await safeEditMessage(ctx, message, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback('🎮 Play Games', 'play_bingo')],
@@ -3055,7 +3055,7 @@ bot.action(/finish_withdrawal_(\d+)_(\d+)_(.+)/, async (ctx) => {
     
     // Edit the original message to show it's completed
     try {
-      await ctx.editMessageText(`✅ **COMPLETED** - Withdrawal Request\n\n👤 **User:** ${displayName}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🆔 **Withdrawal ID:** ${withdrawalId}\n\n✅ This withdrawal has been completed by @${ctx.from.username || adminId}`, { parse_mode: 'Markdown' });
+      await safeEditMessage(ctx, `✅ **COMPLETED** - Withdrawal Request\n\n👤 **User:** ${displayName}\n🆔 **ID:** ${user.telegramId}\n💸 **Amount:** ${amount} ETB\n🆔 **Withdrawal ID:** ${withdrawalId}\n\n✅ This withdrawal has been completed by @${ctx.from.username || adminId}`, { parse_mode: 'Markdown' });
     } catch (editError) {
       console.log('Could not edit original message:', editError.message);
     }
@@ -3224,7 +3224,7 @@ bot.action('withdraw_cbe', async (ctx) => {
     console.log(`🏦 CBE Withdrawal selected by user ${ctx.from.id}`);
     ctx.session.withdrawState = 'waiting_for_cbe_account';
     ctx.session.withdrawMethod = 'CBE Bank';
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `🏦 **CBE Bank Withdrawal**\n\nPlease enter your CBE account number to receive your withdrawal.`,
       { parse_mode: 'Markdown' }
     );
@@ -3240,7 +3240,7 @@ bot.action('withdraw_telebirr', async (ctx) => {
     console.log(`📱 Telebirr Withdrawal selected by user ${ctx.from.id}`);
     ctx.session.withdrawState = 'waiting_for_telebirr_account';
     ctx.session.withdrawMethod = 'Telebirr';
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `📱 **Telebirr Withdrawal**\n\nPlease enter your Telebirr phone number to receive your withdrawal.`,
       { parse_mode: 'Markdown' }
     );
