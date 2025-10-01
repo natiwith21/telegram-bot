@@ -616,7 +616,7 @@ async function checkUserRegistration(ctx, callback) {
 // Play Bingo action
 bot.action('play_bingo', async (ctx) => {
   if (await checkUserRegistration(ctx, 'play_bingo')) {
-    await ctx.editMessageText('🍀 **Best of luck on your Bingo game adventure!** 🎮\n\nChoose your betting level:', {
+    await safeEditMessage(ctx, '🍀 **Best of luck on your Bingo game adventure!** 🎮\n\nChoose your betting level:', {
       parse_mode: 'Markdown',
       reply_markup: bingoModesKeyboard.reply_markup
     });
@@ -1297,7 +1297,7 @@ bot.action(/admin_user_(.+)/, async (ctx) => {
 
 // Registration flow
 bot.action('register', async (ctx) => {
-  await ctx.editMessageText(
+  await safeEditMessage(ctx,
     '📝 **Registration**\n\nTo complete your registration, please share your contact information.',
     {
       parse_mode: 'Markdown',
@@ -1373,7 +1373,7 @@ bot.action('balance', async (ctx) => {
   const user = await User.findOne({ telegramId });
   
   if (!user) {
-    await ctx.editMessageText('❌ You need to register first!', {
+    await safeEditMessage(ctx, '❌ You need to register first!', {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('📝 Register Now', 'register')],
         [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
@@ -1382,7 +1382,7 @@ bot.action('balance', async (ctx) => {
     return;
   }
   
-  await ctx.editMessageText(
+  await safeEditMessage(ctx,
     `💳 **Your Balance**\n\n💰 Coins: ${user.balance}\n🎁 Bonus: ${user.bonus}\n📱 Phone: ${user.phoneNumber || 'Not set'}\n\n${user.balance === 0 ? '💡 **To start playing:**\n• Use /deposit to add money to your wallet\n• Or try the free demo game first' : ''}`,
     {
       parse_mode: 'Markdown',
@@ -1423,7 +1423,7 @@ bot.action('instructions', async (ctx) => {
 Good luck and have fun! 🍀
   `;
   
-  await ctx.editMessageText(instructionsText, {
+  await safeEditMessage(ctx, instructionsText, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
@@ -1440,7 +1440,7 @@ bot.action('invite', async (ctx) => {
     const botUsername = botInfo.username;
     
     if (!botUsername) {
-      await ctx.editMessageText(
+      await safeEditMessage(ctx,
         '❌ Invite System Unavailable\n\nThe bot username is not configured. Please contact the admin.',
         {
           reply_markup: Markup.inlineKeyboard([
@@ -1453,7 +1453,7 @@ bot.action('invite', async (ctx) => {
     }
     
     const referralLink = `https://t.me/${botUsername}?start=${ctx.from.id}`;
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `👥 Invite Friends\n\nShare this link and earn bonuses:\n\n${referralLink}\n\n🎁 Earn 25 bonus coins for each friend who registers!`,
       {
         reply_markup: Markup.inlineKeyboard([
@@ -1464,7 +1464,7 @@ bot.action('invite', async (ctx) => {
     );
   } catch (error) {
     console.error('Invite error:', error);
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       '❌ Invite System Error\n\nThere was an error generating your invite link. Please try again later.',
       {
         reply_markup: Markup.inlineKeyboard([
@@ -1477,7 +1477,7 @@ bot.action('invite', async (ctx) => {
 });
 
 bot.action('support', async (ctx) => {
-  await ctx.editMessageText(
+  await safeEditMessage(ctx,
     '📞 **Contact Support**\n\nNeed help? Our support team is here for you!\n\n📧 Email: support@bingobot.com\n💬 Telegram: @BingoSupport\n⏰ Hours: 24/7',
     {
       parse_mode: 'Markdown',
@@ -1498,7 +1498,7 @@ bot.action('deposit', async (ctx) => {
   try {
     const user = await User.findOne({ telegramId: userId });
     if (!user) {
-      await ctx.editMessageText(
+      await safeEditMessage(ctx,
         `❌ **Registration Required**\n\n` +
         `You need to register first before making deposits.\n\n` +
         `📝 **To register:**\n` +
@@ -1516,7 +1516,7 @@ bot.action('deposit', async (ctx) => {
     }
   } catch (error) {
     console.error('Error checking user registration:', error);
-    await ctx.editMessageText('❌ Error checking registration. Please try again.');
+    await safeEditMessage(ctx, '❌ Error checking registration. Please try again.');
     return;
   }
   
@@ -1530,7 +1530,7 @@ bot.action('deposit', async (ctx) => {
     [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
   ]);
 
-  await ctx.editMessageText(message, {
+  await safeEditMessage(ctx, message, {
     parse_mode: 'Markdown',
     reply_markup: keyboard.reply_markup
   });
@@ -3159,7 +3159,7 @@ bot.action('withdraw', async (ctx) => {
     const telegramId = ctx.from.id.toString();
     const user = await User.findOne({ telegramId });
     if (!user) {
-      await ctx.editMessageText('❌ You need to register first!', {
+      await safeEditMessage(ctx, '❌ You need to register first!', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('📝 Register Now', 'register')],
           [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
@@ -3170,7 +3170,7 @@ bot.action('withdraw', async (ctx) => {
     // Check if user has played at least 3 games
     const gamesPlayed = user.gameHistory ? user.gameHistory.length : 0;
     if (gamesPlayed < 3) {
-      await ctx.editMessageText(
+      await safeEditMessage(ctx,
         `❌ **Withdrawal Locked**\n\n🎮 **Games Required:** You must play at least 3 games before you can withdraw.\n\n📊 **Your Progress:**\n• Games Played: ${gamesPlayed}/3\n• Games Remaining: ${3 - gamesPlayed}\n\n💰 **Current Balance:** ${user.balance} coins\n\n🎯 **Play more games to unlock withdrawals!**`,
         {
           parse_mode: 'Markdown',
@@ -3186,7 +3186,7 @@ bot.action('withdraw', async (ctx) => {
     
     // Check minimum withdrawal balance
     if (user.balance < 50) {
-      await ctx.editMessageText(
+      await safeEditMessage(ctx,
         `❌ **Insufficient Balance**\n\n💰 **Current Balance:** ${user.balance} coins\n🔒 **Minimum Withdrawal:** 50 coins\n⚡ **Needed:** ${50 - user.balance} more coins\n\n💡 **To withdraw, you need:**\n• At least 50 coins in your balance\n• Have played at least 3 games ✅\n\n🎮 **Play more games or deposit to reach minimum!**`,
         {
           parse_mode: 'Markdown',
@@ -3201,7 +3201,7 @@ bot.action('withdraw', async (ctx) => {
     }
     // Start withdraw flow
     ctx.session.withdrawState = 'waiting_for_method';
-    await ctx.editMessageText(
+    await safeEditMessage(ctx,
       `🏧 **Withdraw Flow**\n\nChoose your preferred withdrawal method:`,
       {
         parse_mode: 'Markdown',
