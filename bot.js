@@ -528,13 +528,24 @@ bot.start(async (ctx) => {
 });
 
 
+// Helper function to safely edit messages (handles both photo and text messages)
+async function safeEditMessage(ctx, text, options = {}) {
+  const isPhotoMessage = ctx.callbackQuery.message.photo;
+  
+  if (isPhotoMessage) {
+    await ctx.editMessageCaption(text, options);
+  } else {
+    await ctx.editMessageText(text, options);
+  }
+}
+
 // Main menu action
 bot.action('main_menu', async (ctx) => {
   const telegramId = ctx.from.id.toString();
   const user = await User.findOne({ telegramId });
   
   if (!user) {
-    await ctx.editMessageText(
+    await safeEditMessage(ctx, 
       '❌ **User not found**\n\nPlease register first to access the menu.',
       {
         parse_mode: 'Markdown',
@@ -571,7 +582,7 @@ bot.action('main_menu', async (ctx) => {
   
   message += `\n💡 **Need more coins?** Use the Deposit button below!`;
   
-  await ctx.editMessageText(message, {
+  await safeEditMessage(ctx, message, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback('🎮 Play Bingo', 'play_bingo'), Markup.button.callback('💰 Deposit', 'deposit')],
