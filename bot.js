@@ -1948,8 +1948,7 @@ bot.action('deposit_manual', async (ctx) => {
   console.log(`🔍 Session after setting:`, ctx.session);
   
   const message = `🟡 **Manual Deposit**\n\n` +
-    `Please enter the amount you wish to deposit in Ethiopian Birr (ETB).\n\n` +
-    `እባክዎ ወደ አካውንቶ ማስገባት የሚፈልጉትን መጠን ብር (ETB) ቁጥር ያስገቡ።\n\n` +
+    `እንዲሞላልዎት የሚፈልጉትን የገንዘብ መጠን ያስገቡ:\n\n` +
     `💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB\n` +
     `💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB\n\n` +
     `📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲ ያስገቡ:** 100`;
@@ -2012,9 +2011,6 @@ bot.on('text', async (ctx) => {
     const keyboard = Markup.inlineKeyboard([
       [Markup.button.callback('💸 Pay from CBE Bank to CBE Bank only', 'payment_cbe')],
       [Markup.button.callback('💸 Pay from Telebirr to Telebirr only', 'payment_telebirr')],
-      [Markup.button.callback('💰 Check Balance', 'balance')],
-      [Markup.button.callback('📞 Contact Support', 'support')],
-      [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
     ]);
 
     await ctx.reply(message, {
@@ -2184,18 +2180,22 @@ bot.on('text', async (ctx) => {
 bot.action('payment_cbe', async (ctx) => {
   const userId = ctx.from.id.toString();
   const amount = ctx.session.depositAmount;
-  
+
   ctx.session.paymentMethod = 'CBE Bank';
   ctx.session.depositState = 'waiting_for_sms';
-  
-  const message = `🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት**\n` +
-    `➡️ \`${PAYMENT_CONFIG.bankAccount}\`\n\n` +
-    `📌 **Instructions:**\n` +
+
+  const accountNumber = PAYMENT_CONFIG.bankAccount;
+
+  const instructions = `📌 **Instructions:**\n` +
     `1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
     `2. የምትልኩት የገንዘብ መጠን እና እዚ ላይ እንዲሞላልዎ የምታስገቡት የብር መጠን ተመሳሳይ መሆኑን እርግጠኛ ይሁኑ (${amount} ETB).\n` +
     `3. ብሩን ስትልኩ የከፈላችሁበትን መረጃ የያዝ አጭር የጹሁፍ መልክት(sms) ከኢትዮጵያ ንግድ ባንክ ይደርሳችኋል\n` +
     `4. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት\n` +
-    `5. ብር ስትልኩ የምትጠቀሙት USSD(889) ከሆነ አንዳንዴ አጭር የጹሁፍ መለክት(sms) ላይገባላቹ ስለሚችል ከUSSD(889) ሂደት መጨረሻ ላይ Complete የሚለው ላይ ስደርሱ 3 ቁጥርን በመጫን የትራንዛክሽን ቁጥሩን ሲያሳያቹህ ትራንዛክሽን ቁጥሩን ጽፎ ማስቀመጥ ይኖርባችኋል\n\n` +
+    `5. ብር ስትልኩ የምትጠቀሙት USSD(889) ከሆነ አንዳንዴ አጭር የጹሁፍ መለክት(sms) ላይገባላቹ ስለሚችል ከUSSD(889) ሂደት መጨረሻ ላይ Complete የሚለው ላይ ስደርሱ 3 ቁጥርን በመጫን የትራንዛክሽን ቁጥሩን ሲያሳያቹህ ትራንዛክሽን ቁጥሩን ጽፎ ማስቀመጥ ይኖርባችኋል`;
+
+  const message = `🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት**\n` +
+    `➡️ \`${accountNumber}\`\n\n` +
+    instructions + `\n\n` +
     `📢 **ማሳሰቢያ:**\n` +
     `- አጭር የጹሁፍ መለክት(sms) ካልደረሳቹ ያለትራንዛክሽን ቁጥር ሲስተሙ ዋሌት ስለማይሞላላቹ የከፈላችሁበትን ደረሰኝ ከባንክ በመቀበል በማንኛውም ሰአት ትራንዛክሽን ቁጥሩን ቦቱ ላይ ማስገባት ትችላላቹ \n` +
     `- የሚያጋጥማቹ የክፍያ ችግር ካለ, በዚ ኤጀንቱን ማዋራት ይችላሉ:\n` +
@@ -2204,6 +2204,8 @@ bot.action('payment_cbe', async (ctx) => {
     `👇👇👇`;
 
   const keyboard = Markup.inlineKeyboard([
+    [Markup.button.copyText('📋 Copy Account Number', accountNumber)],
+    [Markup.button.copyText('📋 Copy Instructions', instructions)],
     [Markup.button.callback('💰 Check Balance', 'balance')],
     [Markup.button.callback('📞 Contact Support', 'support')],
     [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
@@ -2214,6 +2216,7 @@ bot.action('payment_cbe', async (ctx) => {
     reply_markup: keyboard.reply_markup
   });
 });
+
 
 // Step 4: Telebirr Payment
 bot.action('payment_telebirr', async (ctx) => {
