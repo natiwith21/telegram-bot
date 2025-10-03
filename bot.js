@@ -2190,7 +2190,7 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(accountMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Account Number', PAYMENT_CONFIG.bankAccount)]
+      [Markup.button.callback('📋 Copy Account Number', 'copy_cbe_account')]
     ])
   });
 
@@ -2210,7 +2210,7 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
+      [Markup.button.callback('📋 Copy Instructions', 'copy_cbe_instructions')]
     ])
   });
 
@@ -2238,7 +2238,7 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(phoneMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Phone Number', PAYMENT_CONFIG.agentPhone)]
+      [Markup.button.callback('📋 Copy Phone Number', 'copy_telebirr_phone')]
     ])
   });
 
@@ -2257,7 +2257,7 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
+      [Markup.button.callback('📋 Copy Instructions', 'copy_telebirr_instructions')]
     ])
   });
 
@@ -2268,6 +2268,58 @@ bot.action('payment_telebirr', async (ctx) => {
       [Markup.button.callback('📞 Contact Support', 'support')],
       [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
     ])
+  });
+});
+
+// Copy button handlers
+bot.action('copy_cbe_account', async (ctx) => {
+  await ctx.answerCbQuery('📋 Account number copied!');
+  await ctx.reply(`🏦 **CBE Bank Account:**\n\`${PAYMENT_CONFIG.bankAccount}\``, {
+    parse_mode: 'Markdown'
+  });
+});
+
+bot.action('copy_cbe_instructions', async (ctx) => {
+  await ctx.answerCbQuery('📋 Instructions copied!');
+  const amount = ctx.session.depositAmount || 50;
+  const instructionsMessage = 
+    `📌 **CBE Bank Instructions:**\n` +
+    `1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
+    `2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ\n` +
+    `3. ብሩን ስትልኩ ከCBE የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ\n` +
+    `4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት\n` +
+    `5. ከUSSD (889) በመጠቀም ከፈለጉ በመጨረሻ የሚታየውን Transaction ID ይቀርቡ\n\n` +
+    `📢 **ማሳሰቢያ:**\n` +
+    `- ከCBE የሚመጣ SMS ካልደረሰ የትራንዛክሽን ቁጥር በቦቱ ላይ በእጅ ይግቡ\n` +
+    `- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ`;
+  
+  await ctx.reply(instructionsMessage, {
+    parse_mode: 'Markdown'
+  });
+});
+
+bot.action('copy_telebirr_phone', async (ctx) => {
+  await ctx.answerCbQuery('📋 Phone number copied!');
+  await ctx.reply(`📱 **Telebirr Phone:**\n\`${PAYMENT_CONFIG.agentPhone}\``, {
+    parse_mode: 'Markdown'
+  });
+});
+
+bot.action('copy_telebirr_instructions', async (ctx) => {
+  await ctx.answerCbQuery('📋 Instructions copied!');
+  const amount = ctx.session.depositAmount || 50;
+  const instructionsMessage = 
+    `📌 **Telebirr Instructions:**\n` +
+    `1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
+    `2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ\n` +
+    `3. ብሩን ስትልኩ ከቴሌብር የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ\n` +
+    `4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት\n\n` +
+    `📢 **ማሳሰቢያ:**\n` +
+    `- ከቴሌብር የሚመጣ SMS ካልደረሰ የትራንዛክሽን ቁጥር በቦቱ ላይ በእጅ ይግቡ\n` +
+    `- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ`;
+  
+  await ctx.reply(instructionsMessage, {
+    parse_mode: 'Markdown'
   });
 });
 
