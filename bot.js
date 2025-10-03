@@ -2224,37 +2224,50 @@ bot.action('payment_cbe', async (ctx) => {
   });
 });
 
-
 // Step 4: Telebirr Payment
 bot.action('payment_telebirr', async (ctx) => {
   const userId = ctx.from.id.toString();
   const amount = ctx.session.depositAmount;
-  
+
   ctx.session.paymentMethod = 'Telebirr';
   ctx.session.depositState = 'waiting_for_sms';
-  
-  const message = `📱 **የቴሌብር አካውንት**\n` +
-    `➡️ \`${PAYMENT_CONFIG.agentPhone}\`\n\n` +
-    `📌 **Instructions:**\n` +
-    `1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ.\n` + // Ensure min 50 ETB
-    `2. የምትልኩት የገንዘብ መጠን እና እዚ ላይ እንዲሞላልዎ የምታስገቡት የብር መጠን ተመሳሳይ መሆኑን እርግጠኛ ይሁኑ (${amount} ETB).\n` +
-    `3. ብሩን ስትልኩ የከፈላችሁበትን መረጃ የያዝ አጭር የጹሁፍ መልክት(sms) ከቴሌብር ይደርሳችኋል\n` +
-    `4. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት\n\n` +
-    
-    `- የሚያጋጥማቹ የክፍያ ችግር ካለ, በዚ ኤጀንቱን ማዋራት ይችላሉ:\n` +
-    `  - 🛠 @nati280 (support)\n\n` +
-    `✍️ **የከፈለችሁበትን አጭር የጹሁፍ መለክት(sms) እዚ ላይ ያስገቡት :**\n` +
-    `👇👇👇`;
 
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('💰 Check Balance', 'balance')],
-    [Markup.button.callback('📞 Contact Support', 'support')],
-    [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
-  ]);
+  // 1️⃣ First message → Telebirr phone number
+  const phoneMessage = `📱 **የቴሌብር አካውንት**\n➡️ \`${PAYMENT_CONFIG.agentPhone}\``;
 
-  await safeEditMessage(ctx, message, {
+  await ctx.reply(phoneMessage, {
     parse_mode: 'Markdown',
-    reply_markup: keyboard.reply_markup
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.copyText('📋 Copy Phone Number', PAYMENT_CONFIG.agentPhone)]
+    ])
+  });
+
+  // 2️⃣ Second message → Instructions
+  const instructionsMessage = 
+    `📌 **Instructions:**\n` +
+    `1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
+    `2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ\n` +
+    `3. ብሩን ስትልኩ ከቴሌብር የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ\n` +
+    `4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት\n\n` +
+    `📢 **ማሳሰቢያ:**\n` +
+    `- ከቴሌብር የሚመጣ SMS ካልደረሰ የትራንዛክሽን ቁጥር በቦቱ ላይ በእጅ ይግቡ\n` +
+    `- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
+    `✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
+
+  await ctx.reply(instructionsMessage, {
+    parse_mode: 'Markdown',
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
+    ])
+  });
+
+  // 3️⃣ Extra buttons (like in your original code)
+  await ctx.reply("➡️ Choose an option:", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback('💰 Check Balance', 'balance')],
+      [Markup.button.callback('📞 Contact Support', 'support')],
+      [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+    ])
   });
 });
 
