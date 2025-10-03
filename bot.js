@@ -2190,7 +2190,7 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(accountMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('📋 Copy Account Number', 'copy_cbe_account')]
+      [Markup.button.copyText('📋 Copy Account Number', PAYMENT_CONFIG.bankAccount)]
     ])
   });
 
@@ -2210,7 +2210,7 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('📋 Copy Instructions', 'copy_cbe_instructions')]
+      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
     ])
   });
 
@@ -2238,7 +2238,7 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(phoneMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('📋 Copy Phone Number', 'copy_telebirr_phone')]
+      [Markup.button.copyText('📋 Copy Phone Number', PAYMENT_CONFIG.agentPhone)]
     ])
   });
 
@@ -2257,7 +2257,7 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('📋 Copy Instructions', 'copy_telebirr_instructions')]
+      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
     ])
   });
 
