@@ -2190,12 +2190,12 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(accountMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Account Number', PAYMENT_CONFIG.bankAccount)]
+      [Markup.button.switchInlineQuery("📋 Copy Account Number", PAYMENT_CONFIG.bankAccount)]
     ])
   });
 
   // 2️⃣ Second message → Instructions
-  const instructionsMessage = 
+  const instructionsMessage =
     `📌 **Instructions:**\n` +
     `1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
     `2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ\n` +
@@ -2210,7 +2210,7 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
+      [Markup.button.switchInlineQuery("📋 Copy Instructions", instructionsMessage)]
     ])
   });
 
@@ -2223,6 +2223,7 @@ bot.action('payment_cbe', async (ctx) => {
     ])
   });
 });
+
 
 // Step 4: Telebirr Payment
 bot.action('payment_telebirr', async (ctx) => {
@@ -2238,12 +2239,12 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(phoneMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Phone Number', PAYMENT_CONFIG.agentPhone)]
+      [Markup.button.switchInlineQuery("📋 Copy Phone Number", PAYMENT_CONFIG.agentPhone)]
     ])
   });
 
   // 2️⃣ Second message → Instructions
-  const instructionsMessage = 
+  const instructionsMessage =
     `📌 **Instructions:**\n` +
     `1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
     `2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ\n` +
@@ -2257,7 +2258,7 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
+      [Markup.button.switchInlineQuery("📋 Copy Instructions", instructionsMessage)]
     ])
   });
 
@@ -2270,6 +2271,7 @@ bot.action('payment_telebirr', async (ctx) => {
     ])
   });
 });
+
 
 // Copy button handlers
 bot.action('copy_cbe_account', async (ctx) => {
