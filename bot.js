@@ -2180,36 +2180,50 @@ bot.on('text', async (ctx) => {
 bot.action('payment_cbe', async (ctx) => {
   const userId = ctx.from.id.toString();
   const amount = ctx.session.depositAmount;
-  
+
   ctx.session.paymentMethod = 'CBE Bank';
   ctx.session.depositState = 'waiting_for_sms';
-  
-  const message = `🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት**\n` +
-    `➡️ \`${PAYMENT_CONFIG.bankAccount}\`\n\n` +
+
+  // 1️⃣ First message → Bank account number
+  const accountMessage = `🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት**\n➡️ \`${PAYMENT_CONFIG.bankAccount}\``;
+
+  await ctx.reply(accountMessage, {
+    parse_mode: 'Markdown',
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.copyText('📋 Copy Account Number', PAYMENT_CONFIG.bankAccount)]
+    ])
+  });
+
+  // 2️⃣ Second message → Instructions
+  const instructionsMessage = 
     `📌 **Instructions:**\n` +
     `1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ\n` +
-    `2. የምትልኩት የገንዘብ መጠን እና እዚ ላይ እንዲሞላልዎ የምታስገቡት የብር መጠን ተመሳሳይ መሆኑን እርግጠኛ ይሁኑ (${amount} ETB).\n` +
-    `3. ብሩን ስትልኩ የከፈላችሁበትን መረጃ የያዝ አጭር የጹሁፍ መልክት(sms) ከኢትዮጵያ ንግድ ባንክ ይደርሳችኋል\n` +
-    `4. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት\n` +
-    `5. ብር ስትልኩ የምትጠቀሙት USSD(889) ከሆነ አንዳንዴ አጭር የጹሁፍ መለክት(sms) ላይገባላቹ ስለሚችል ከUSSD(889) ሂደት መጨረሻ ላይ Complete የሚለው ላይ ስደርሱ 3 ቁጥርን በመጫን የትራንዛክሽን ቁጥሩን ሲያሳያቹህ ትራንዛክሽን ቁጥሩን ጽፎ ማስቀመጥ ይኖርባችኋል\n\n` +
+    `2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ\n` +
+    `3. ብሩን ስትልኩ ከCBE የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ\n` +
+    `4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት\n` +
+    `5. ከUSSD (889) በመጠቀም ከፈለጉ በመጨረሻ የሚታየውን Transaction ID ይቀርቡ\n\n` +
     `📢 **ማሳሰቢያ:**\n` +
-    `- አጭር የጹሁፍ መለክት(sms) ካልደረሳቹ ያለትራንዛክሽን ቁጥር ሲስተሙ ዋሌት ስለማይሞላላቹ የከፈላችሁበትን ደረሰኝ ከባንክ በመቀበል በማንኛውም ሰአት ትራንዛክሽን ቁጥሩን ቦቱ ላይ ማስገባት ትችላላቹ \n` +
-    `- የሚያጋጥማቹ የክፍያ ችግር ካለ, በዚ ኤጀንቱን ማዋራት ይችላሉ:\n` +
-    `  - 🛠 @nati280 (support)\n\n` +
-    `✍️ **የከፈለችሁበትን አጭር የጹሁፍ መለክት(sms) ወይም FT ብሎ የሚጀምረዉን የትራንዛክሽን ቁጥር እዚ ላይ ያስገቡት**\n` +
-    `👇👇👇`;
+    `- ከCBE የሚመጣ SMS ካልደረሰ የትራንዛክሽን ቁጥር በቦቱ ላይ በእጅ ይግቡ\n` +
+    `- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
+    `✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
 
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('💰 Check Balance', 'balance')],
-    [Markup.button.callback('📞 Contact Support', 'support')],
-    [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
-  ]);
-
-  await safeEditMessage(ctx, message, {
+  await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
-    reply_markup: keyboard.reply_markup
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.copyText('📋 Copy Instructions', instructionsMessage)]
+    ])
+  });
+
+  // 3️⃣ Extra buttons (like in your original code)
+  await ctx.reply("➡️ Choose an option:", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback('💰 Check Balance', 'balance')],
+      [Markup.button.callback('📞 Contact Support', 'support')],
+      [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+    ])
   });
 });
+
 
 // Step 4: Telebirr Payment
 bot.action('payment_telebirr', async (ctx) => {
