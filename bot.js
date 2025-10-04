@@ -2175,7 +2175,7 @@ bot.on('text', async (ctx) => {
   // If not in any deposit or withdrawal state, ignore the text
   console.log('❌ Text not handled - not in deposit or withdrawal flow');
 });
-
+////////////////////////////////////////////////////////////////////////////////////
 // Step 4: CBE Bank Payment
 bot.action('payment_cbe', async (ctx) => {
   const userId = ctx.from.id.toString();
@@ -2190,7 +2190,7 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(accountMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.switchInlineQuery("📋 Copy Account Number", PAYMENT_CONFIG.bankAccount)]
+      [Markup.button.callback("📋 Copy Account Number", "copy_cbe_account")]
     ])
   });
 
@@ -2210,11 +2210,11 @@ bot.action('payment_cbe', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.switchInlineQuery("📋 Copy Instructions", instructionsMessage)]
+      [Markup.button.callback("📋 Copy Instructions", "copy_cbe_instructions")]
     ])
   });
 
-  // 3️⃣ Extra buttons (like in your original code)
+  // 3️⃣ Extra buttons
   await ctx.reply("➡️ Choose an option:", {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback('💰 Check Balance', 'balance')],
@@ -2239,7 +2239,7 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(phoneMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.switchInlineQuery("📋 Copy Phone Number", PAYMENT_CONFIG.agentPhone)]
+      [Markup.button.callback("📋 Copy Phone Number", "copy_telebirr_phone")]
     ])
   });
 
@@ -2258,11 +2258,11 @@ bot.action('payment_telebirr', async (ctx) => {
   await ctx.reply(instructionsMessage, {
     parse_mode: 'Markdown',
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.switchInlineQuery("📋 Copy Instructions", instructionsMessage)]
+      [Markup.button.callback("📋 Copy Instructions", "copy_telebirr_instructions")]
     ])
   });
 
-  // 3️⃣ Extra buttons (like in your original code)
+  // 3️⃣ Extra buttons
   await ctx.reply("➡️ Choose an option:", {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback('💰 Check Balance', 'balance')],
@@ -2324,6 +2324,7 @@ bot.action('copy_telebirr_instructions', async (ctx) => {
     parse_mode: 'Markdown'
   });
 });
+////////////////////////////////////////////////////////////////////////////
 
 // Payment confirmation handler
 bot.action('payment_confirmed', async (ctx) => {
