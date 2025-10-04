@@ -1939,32 +1939,27 @@ bot.action('deposit_manual', async (ctx) => {
     await safeEditMessage(ctx, '❌ Error checking registration. Please try again.');
     return;
   }
-  
+ ///////////////////////////////////////////////////////////// 
   // Store user state for deposit flow
-  ctx.session = ctx.session || {};
-  ctx.session.depositState = 'waiting_for_amount';
-  
-  console.log(`✅ Deposit Manual - User ${userId}: Set depositState = 'waiting_for_amount'`);
-  console.log(`🔍 Session after setting:`, ctx.session);
-  
-  const message = `🟡 **Manual Deposit**\n\n` +
-    `እንዲሞላልዎት የሚፈልጉትን የገንዘብ መጠን ያስገቡ:\n\n` +
-    `💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB\n` +
-    `💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB\n\n` +
-    `📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲ ያስገቡ:** 100`;
+ctx.session = ctx.session || {};
+ctx.session.depositState = 'waiting_for_amount';
 
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('💰 Check Balance', 'balance')],
-    [Markup.button.callback('📞 Contact Support', 'support')],
-    [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
-  ]);
+console.log(`✅ Deposit Manual - User ${userId}: Set depositState = 'waiting_for_amount'`);
+console.log(`🔍 Session after setting:`, ctx.session);
 
-  await safeEditMessage(ctx, message, {
-    parse_mode: 'Markdown',
-    reply_markup: keyboard.reply_markup
-  });
+const message = `🟡 **Manual Deposit**
+
+እንዲሞላልዎት የሚፈልጉትን የገንዘብ መጠን ያስገቡ:
+
+💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB
+💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB
+
+📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲያስገቡ:** 100`;
+
+await safeEditMessage(ctx, message, {
+  parse_mode: 'Markdown'
 });
-
+///////////////////////////////////////////////////////////////////////
 // Step 3: Handle amount input and show payment methods
 bot.on('text', async (ctx) => {
   const userId = ctx.from.id.toString();
@@ -2189,9 +2184,13 @@ bot.action('payment_cbe', async (ctx) => {
 `🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት)**\n\`\`\`\n${PAYMENT_CONFIG.bankAccount}\n\`\`\`\n` +
 `📌 **Instructions:**\n\`\`\`
 1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ
+
 2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ
+
 3. ብሩን ስትልኩ ከCBE የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ
+
 4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት
+
 5. ከUSSD (889) በመጠቀም ከፈለጉ በመጨረሻ የሚታየውን Transaction ID ይቀርቡ
 \`\`\`\n` +
 `📢 **ማሳሰቢያ:**\n` +
@@ -2217,8 +2216,11 @@ bot.action('payment_telebirr', async (ctx) => {
 `📱 **የቴሌብር አካውንት**\n\`\`\`\n${PAYMENT_CONFIG.agentPhone}\n\`\`\`\n` +
 `📌 **Instructions:**\n\`\`\`
 1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ
+
 2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ
+
 3. ብሩን ስትልኩ ከቴሌብር የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ
+
 4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት
 \`\`\`\n` +
 `📢 **ማሳሰቢያ:**\n` +
