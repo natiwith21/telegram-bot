@@ -2184,17 +2184,10 @@ bot.action('payment_cbe', async (ctx) => {
   ctx.session.paymentMethod = 'CBE Bank';
   ctx.session.depositState = 'waiting_for_sms';
 
-  // 1️⃣ First message → Bank account number (copyable box style)
-  const accountMessage = `🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት**\n\`\`\`\n${PAYMENT_CONFIG.bankAccount}\n\`\`\``;
-
-  await ctx.reply(accountMessage, {
-    parse_mode: 'Markdown'
-  });
-
-  // 2️⃣ Second message → Instructions
-  const instructionsMessage = 
-`📌 **Instructions:**\n` +
-`\`\`\`
+  // Combine Bank account + Instructions into one message
+  const message = 
+`🏦 **ኢትዮጵያ ንግድ ባንክ (CBE) አካውንት)**\n\`\`\`\n${PAYMENT_CONFIG.bankAccount}\n\`\`\`\n` +
+`📌 **Instructions:**\n\`\`\`
 1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ
 2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ
 3. ብሩን ስትልኩ ከCBE የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ
@@ -2206,21 +2199,10 @@ bot.action('payment_cbe', async (ctx) => {
 `- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
 `✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
 
-
-  await ctx.reply(instructionsMessage, {
+  await ctx.reply(message, {
     parse_mode: 'Markdown'
   });
-
-  // 3️⃣ Extra buttons
-  await ctx.reply("➡️ Choose an option:", {
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('💰 Check Balance', 'balance')],
-      [Markup.button.callback('📞 Contact Support', 'support')],
-      [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
-    ])
-  });
 });
-
 
 // Step 4: Telebirr Payment
 bot.action('payment_telebirr', async (ctx) => {
@@ -2230,17 +2212,10 @@ bot.action('payment_telebirr', async (ctx) => {
   ctx.session.paymentMethod = 'Telebirr';
   ctx.session.depositState = 'waiting_for_sms';
 
-  // 1️⃣ First message → Telebirr phone number (copyable box style)
-  const phoneMessage = `📱 **የቴሌብር አካውንት**\n\`\`\`\n${PAYMENT_CONFIG.agentPhone}\n\`\`\``;
-
-  await ctx.reply(phoneMessage, {
-    parse_mode: 'Markdown'
-  });
-
-  // 2️⃣ Second message → Instructions
-  const instructionsMessage = 
-`📌 **Instructions:**\n` +
-`\`\`\`
+  // Combine Telebirr phone + Instructions into one message
+  const message = 
+`📱 **የቴሌብር አካውንት**\n\`\`\`\n${PAYMENT_CONFIG.agentPhone}\n\`\`\`\n` +
+`📌 **Instructions:**\n\`\`\`
 1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ
 2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ
 3. ብሩን ስትልኩ ከቴሌብር የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ
@@ -2251,81 +2226,11 @@ bot.action('payment_telebirr', async (ctx) => {
 `- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
 `✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
 
-
-  await ctx.reply(instructionsMessage, {
-    parse_mode: 'Markdown'
-  });
-
-  // 3️⃣ Extra buttons
-  await ctx.reply("➡️ Choose an option:", {
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('💰 Check Balance', 'balance')],
-      [Markup.button.callback('📞 Contact Support', 'support')],
-      [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
-    ])
-  });
-});
-
-
-// Copy button handlers
-bot.action('copy_cbe_account', async (ctx) => {
-  await ctx.answerCbQuery('📋 Account number copied!');
-  await ctx.reply(`🏦 **CBE Bank Account:**\n\`\`\`\n${PAYMENT_CONFIG.bankAccount}\n\`\`\``, {
+  await ctx.reply(message, {
     parse_mode: 'Markdown'
   });
 });
 
-bot.action('copy_cbe_instructions', async (ctx) => {
-  await ctx.answerCbQuery('📋 Instructions copied!');
-  const amount = ctx.session.depositAmount || 50;
-  const instructionsMessage = 
-`📌 **Instructions:**\n` +
-`\`\`\`
-1. ከላይ ባለው የኢትዮጵያ ንግድ ባንክ አካውንት ${Math.max(amount, 50)} ETB ያስገቡ
-2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ
-3. ብሩን ስትልኩ ከCBE የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ
-4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት
-5. ከUSSD (889) በመጠቀም ከፈለጉ በመጨረሻ የሚታየውን Transaction ID ይቀርቡ
-\`\`\`\n` +
-`📢 **ማሳሰቢያ:**\n` +
-`- ከCBE የሚመጣ SMS ካልደረሰ የትራንዛክሽን ቁጥር በቦቱ ላይ በእጅ ይግቡ\n` +
-`- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
-`✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
-
-  
-  await ctx.reply(instructionsMessage, {
-    parse_mode: 'Markdown'
-  });
-});
-
-bot.action('copy_telebirr_phone', async (ctx) => {
-  await ctx.answerCbQuery('📋 Phone number copied!');
-  await ctx.reply(`📱 **Telebirr Phone:**\n\`\`\`\n${PAYMENT_CONFIG.agentPhone}\n\`\`\``, {
-    parse_mode: 'Markdown'
-  });
-});
-
-bot.action('copy_telebirr_instructions', async (ctx) => {
-  await ctx.answerCbQuery('📋 Instructions copied!');
-  const amount = ctx.session.depositAmount || 50;
- const instructionsMessage = 
-`📌 **Instructions:**\n` +
-`\`\`\`
-1. ከላይ ባለው የቴሌብር አካውንት ${Math.max(amount, 50)} ETB ያስገቡ
-2. የምትልኩት መጠን ${amount} ETB እንደሆነ ያረጋግጡ
-3. ብሩን ስትልኩ ከቴሌብር የሚመጣውን አጭር መልእክት (SMS) ይቀበሉ
-4. ያለውን SMS በሙሉ Copy አድርጉ እና በቦቱ Paste በማድረግ ይላኩት
-\`\`\`\n` +
-`📢 **ማሳሰቢያ:**\n` +
-`- ከቴሌብር የሚመጣ SMS ካልደረሰ የትራንዛክሽን ቁጥር በቦቱ ላይ በእጅ ይግቡ\n` +
-`- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
-`✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
-
-  
-  await ctx.reply(instructionsMessage, {
-    parse_mode: 'Markdown'
-  });
-});
 
 ////////////////////////////////////////////////////////////////////////////
 
