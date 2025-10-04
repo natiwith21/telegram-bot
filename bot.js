@@ -1939,27 +1939,32 @@ bot.action('deposit_manual', async (ctx) => {
     await safeEditMessage(ctx, '❌ Error checking registration. Please try again.');
     return;
   }
- ///////////////////////////////////////////////////////////// 
+  
   // Store user state for deposit flow
-ctx.session = ctx.session || {};
-ctx.session.depositState = 'waiting_for_amount';
+  ctx.session = ctx.session || {};
+  ctx.session.depositState = 'waiting_for_amount';
+  
+  console.log(`✅ Deposit Manual - User ${userId}: Set depositState = 'waiting_for_amount'`);
+  console.log(`🔍 Session after setting:`, ctx.session);
+  
+  const message = `🟡 **Manual Deposit**\n\n` +
+    `እንዲሞላልዎት የሚፈልጉትን የገንዘብ መጠን ያስገቡ:\n\n` +
+    `💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB\n` +
+    `💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB\n\n` +
+    `📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲ ያስገቡ:** 100`;
 
-console.log(`✅ Deposit Manual - User ${userId}: Set depositState = 'waiting_for_amount'`);
-console.log(`🔍 Session after setting:`, ctx.session);
+  const keyboard = Markup.inlineKeyboard([
+    [Markup.button.callback('💰 Check Balance', 'balance')],
+    [Markup.button.callback('📞 Contact Support', 'support')],
+    [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+  ]);
 
-const message = `🟡 **Manual Deposit**
-
-እንዲሞላልዎት የሚፈልጉትን የገንዘብ መጠን ያስገቡ:
-
-💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB
-💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB
-
-📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲያስገቡ:** 100`;
-
-await safeEditMessage(ctx, message, {
-  parse_mode: 'Markdown'
+  await safeEditMessage(ctx, message, {
+    parse_mode: 'Markdown',
+    reply_markup: keyboard.reply_markup
+  });
 });
-///////////////////////////////////////////////////////////////////////
+
 // Step 3: Handle amount input and show payment methods
 bot.on('text', async (ctx) => {
   const userId = ctx.from.id.toString();
