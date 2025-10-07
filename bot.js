@@ -1911,7 +1911,7 @@ bot.command('deposit', async (ctx) => {
 });
 
 // Step 2: Manual deposit - Enter amount
-bot.action('deposit_manual', async (ctx) => {
+bot.action('deposit_manual', async (ctx) => { 
   const userId = ctx.from.id.toString();
   
   // Check if user is registered first
@@ -1940,21 +1940,23 @@ bot.action('deposit_manual', async (ctx) => {
     return;
   }
   
- // Store user state for deposit flow 
-ctx.session = ctx.session || {};
-ctx.session.depositState = 'waiting_for_amount';
+  // Store user state for deposit flow
+  ctx.session = ctx.session || {};
+  ctx.session.depositState = 'waiting_for_amount';
+  
+  console.log(`✅ Deposit Manual - User ${userId}: Set depositState = 'waiting_for_amount'`);
+  console.log(`🔍 Session after setting:`, ctx.session);
+  
+  const message = `🟡 **Manual Deposit**\n\n` +
+    `እንዲሞላልዎት የሚፈልጉትን የገንዘብ መጠን ያስገቡ:\n\n` +
+    `💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB\n` +
+    `💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB\n\n` +
+    `📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲ ያስገቡ:** 100`;
 
-console.log(`✅ Deposit Manual - User ${userId}: Set depositState = 'waiting_for_amount'`);
-console.log(`🔍 Session after setting:`, ctx.session);
-
-const message = `🟡 **Manual Deposit**\n\n` +
-  `እንዲሞላልዎት የሚፈልጉትን የገንዘብ መጠን ያስገቡ:\n\n` +
-  `💡 **ማስገባት ሚችሉት ጥንሹ መጠን:** 50 ETB\n` +
-  `💡 **ማስገባት ሚችሉት ትልኩ መጠን:** 10,000 ETB\n\n` +
-  `📝 **ለምሳሌ ማስገባት ሚፈልጉት 100 ብር ከሆነ ቁሩን ብቻ እንዲ ያስገቡ:** 100`;
-
-await safeEditMessage(ctx, message, {
-  parse_mode: 'Markdown'
+  // Removed the keyboard part — sending message without buttons
+  await safeEditMessage(ctx, message, {
+    parse_mode: 'Markdown'
+  });
 });
 
 
