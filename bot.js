@@ -1524,10 +1524,7 @@ bot.action('deposit', async (ctx) => {
     `Choose your preferred deposit method:`;
 
   const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback('🟡 Manual', 'deposit_manual')],
-    [Markup.button.callback('💰 Check Balance', 'balance')],
-    [Markup.button.callback('📞 Contact Support', 'support')],
-    [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
+    [Markup.button.callback('🟡 Manual', 'deposit_manual')]
   ]);
 
   await safeEditMessage(ctx, message, {
