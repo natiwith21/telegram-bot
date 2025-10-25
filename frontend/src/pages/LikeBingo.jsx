@@ -1744,22 +1744,22 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "4px", /* Increased gap for more space */
-        padding: "4px", /* Increased padding */
+        gap: "6px", /* Increased gap for more space */
+        padding: "6px", /* Increased padding */
         maxWidth: "370px",
         margin: "0 auto 15px auto"
     },
     staticCell: {
-        width: "32px", /* Slightly increased box size */
-        height: "32px", /* Slightly increased box size */
-        borderRadius: "4px",
+        width: "28px", /* Reduced box size */
+        height: "28px", /* Reduced box size */
+        borderRadius: "8px", /* Increased roundness */
         background: "#ead9f2",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontWeight: "600",
         color: "#6a2f6a",
-        fontSize: "16px", /* Increased font size for numbers */
+        fontSize: "14px", /* Adjusted font size for numbers */
         boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
         cursor: "pointer",
         transition: "all 0.3s ease"
@@ -1806,8 +1806,8 @@ const styles = {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: "8px",
-        fontSize: "11px",
+        borderRadius: "12px", /* Increased roundness */
+        fontSize: "10px", /* Slightly reduced font size */
         fontWeight: "bold",
         cursor: "default",
         transition: "all 0.3s ease",
@@ -2049,16 +2049,16 @@ const styles = {
     playerCardGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "3px"
+        gap: "4px" /* Increased gap */
     },
     playerCardCell: {
         background: "#1a2a4a",
-        borderRadius: "4px",
-        height: "20px",
+        borderRadius: "8px", /* Increased roundness */
+        height: "18px", /* Reduced height */
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "10px",
+        fontSize: "9px", /* Reduced font size */
         fontWeight: "500",
         transition: "all 0.3s ease"
     },
