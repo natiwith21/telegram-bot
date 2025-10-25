@@ -1744,13 +1744,12 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "6px", /* Increased gap for more space */
-        padding: "6px", /* Increased padding */
-        maxWidth: "370px",
+        gap: "3px", /* Reduced gap for tighter layout */
+        padding: "3px", /* Reduced padding */
+        maxWidth: "100%", /* Use full available width */
         margin: "0 auto 15px auto"
     },
     staticCell: {
-        width: "28px", /* Reduced box size */
         height: "28px", /* Reduced box size */
         borderRadius: "8px", /* Increased roundness */
         background: "#ead9f2",
