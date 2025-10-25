@@ -1744,13 +1744,13 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "3px", /* Reduced gap for tighter layout */
-        padding: "3px", /* Reduced padding */
+        gap: "2px", /* Further reduced gap */
+        padding: "2px", /* Further reduced padding */
         maxWidth: "100%", /* Use full available width */
         margin: "0 auto 15px auto"
     },
     staticCell: {
-        height: "28px", /* Reduced box size */
+        height: "32px", /* Increased height for better number visibility */
         borderRadius: "8px", /* Increased roundness */
         background: "#ead9f2",
         display: "flex",
@@ -1758,7 +1758,7 @@ const styles = {
         justifyContent: "center",
         fontWeight: "600",
         color: "#6a2f6a",
-        fontSize: "14px", /* Adjusted font size for numbers */
+        fontSize: "12px", /* Reduced font size to fit two-digit numbers */
         boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
         cursor: "pointer",
         transition: "all 0.3s ease"
