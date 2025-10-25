@@ -1006,12 +1006,12 @@ const LikeBingo = () => {
                         key={num}
                         style={{
                             ...styles.staticCell,
-                            backgroundColor: selectedNumber === num ? '#ff8a2f' : drawnNumbers.includes(num) ? '#1f8f3d' : '#ead9f2',
+                            backgroundColor: selectedNumber === num ? '#1f8f3d' : drawnNumbers.includes(num) ? '#ff8a2f' : '#ead9f2',
                             color: selectedNumber === num || drawnNumbers.includes(num) ? '#fff' : '#6a2f6a'
                         }}
                         onClick={() => handleGridNumberClick(num)}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                     >
                         {num}
                     </motion.div>
@@ -1342,8 +1342,9 @@ const LikeBingo = () => {
                     flex: 1,
                     overflowY: 'hidden',
                     overflowX: 'hidden',
-                    paddingBottom: '60px',
-                    marginBottom: '0'
+                    paddingBottom: '50px',
+                    marginBottom: '0',
+                    maxHeight: 'calc(100vh - 100px)'
                 }}>
 
                     {/* Debug Info - Remove this after fixing */}
@@ -1440,7 +1441,7 @@ const LikeBingo = () => {
                                                     Refresh
                                                 </button>
                                                 <button
-                                                    style={{ ...styles.button, backgroundColor: "#FF4500" }}
+                                                    style={{ ...styles.button, backgroundColor: "#ff6600" }}
                                                     onClick={startGame}
                                                     disabled={isLoading}
                                                 >
@@ -1652,9 +1653,9 @@ const styles = {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        fontSize: "16px",
+        fontSize: "14px",
         fontWeight: "bold",
-        padding: "8px 0",
+        padding: "4px 0",
         position: "relative"
     },
     backBtn: {
@@ -1684,43 +1685,44 @@ const styles = {
     },
     statusGrid: {
         display: "flex",
-        gap: "8px",
+        gap: "4px",
         justifyContent: "space-between",
-        margin: "10px 0"
+        margin: "6px 0"
     },
     statusCard: {
         background: "#fff",
-        padding: "7px 10px",
-        borderRadius: "28px",
+        padding: "4px 6px",
+        borderRadius: "20px",
         textAlign: "center",
-        minWidth: "72px"
+        minWidth: "60px",
+        flex: 1
     },
     statusLabel: {
-        fontSize: "11px",
+        fontSize: "9px",
         color: "#7a4f9a"
     },
     statusValue: {
-        fontSize: "13px",
+        fontSize: "11px",
         fontWeight: "700",
         color: "#7a4f9a"
     },
     warning: {
-        margin: "12px 0",
+        margin: "6px 0",
         background: "#ffdede",
         color: "#c94b4b",
-        padding: "12px",
-        borderRadius: "10px",
+        padding: "8px",
+        borderRadius: "8px",
         textAlign: "center",
-        fontSize: "13px"
+        fontSize: "11px"
     },
     notification: {
-        margin: "12px 0",
+        margin: "6px 0",
         background: "#dcfce7",
         color: "#16a34a",
-        padding: "12px",
-        borderRadius: "10px",
+        padding: "8px",
+        borderRadius: "8px",
         textAlign: "center",
-        fontSize: "13px",
+        fontSize: "11px",
         fontWeight: "500"
     },
     sectionTitle: {
@@ -1732,21 +1734,21 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "3px",
-        padding: "4px",
-        maxWidth: "360px",
+        gap: "2px",
+        padding: "2px",
+        maxWidth: "350px",
         margin: "0 auto"
     },
     staticCell: {
         aspectRatio: "1",
-        borderRadius: "6px",
+        borderRadius: "4px",
         background: "#ead9f2",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontWeight: "600",
         color: "#6a2f6a",
-        fontSize: "11px",
+        fontSize: "10px",
         boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
         cursor: "pointer",
         transition: "all 0.3s ease"
@@ -1811,34 +1813,35 @@ const styles = {
         marginTop: "8px"
     },
     bottomRow: {
-        marginTop: "14px",
+        marginTop: "6px",
         display: "flex",
-        gap: "12px",
+        gap: "8px",
         alignItems: "flex-start"
     },
     miniCard: {
         background: "rgba(255,255,255,0.12)",
-        borderRadius: "12px",
-        padding: "10px",
+        borderRadius: "8px",
+        padding: "6px",
         width: "24%",
-        fontSize: "13px",
+        fontSize: "10px",
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
         textAlign: "center",
-        gap: "3px",
-        lineHeight: "1.4",
+        gap: "2px",
+        lineHeight: "1.2",
         color: "#fff"
     },
     miniCardCell: {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        minHeight: "20px"
+        minHeight: "14px",
+        fontSize: "9px"
     },
     actionButtons: {
         display: "flex",
         justifyContent: "flex-end",
-        gap: "10px",
+        gap: "6px",
         width: "66%"
     },
     buttonRow: {
@@ -1849,10 +1852,10 @@ const styles = {
     },
     button: {
         border: "none",
-        padding: "10px 12px",
-        borderRadius: "24px",
+        padding: "8px 10px",
+        borderRadius: "20px",
         fontWeight: "700",
-        fontSize: "15px",
+        fontSize: "13px",
         cursor: "pointer",
         color: "#fff",
         transition: "all 0.2s ease"
@@ -1861,10 +1864,10 @@ const styles = {
         background: "#2f88ff",
         color: "#fff",
         border: "none",
-        padding: "10px 12px",
-        borderRadius: "24px",
+        padding: "8px 10px",
+        borderRadius: "20px",
         fontWeight: "700",
-        fontSize: "15px",
+        fontSize: "13px",
         cursor: "pointer"
     },
     tabBar: {
