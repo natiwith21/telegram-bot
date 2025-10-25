@@ -1342,9 +1342,9 @@ const LikeBingo = () => {
                     flex: 1,
                     overflowY: 'hidden',
                     overflowX: 'hidden',
-                    paddingBottom: '50px',
+                    paddingBottom: '40px', /* Reduced padding to accommodate smaller tab bar */
                     marginBottom: '0',
-                    maxHeight: 'calc(100vh - 100px)'
+                    maxHeight: 'calc(100vh - 90px)' /* Adjusted max height */
                 }}>
 
                     {/* Debug Info - Remove this after fixing */}
@@ -1687,7 +1687,7 @@ const styles = {
         display: "flex",
         gap: "4px",
         justifyContent: "space-between",
-        margin: "6px 0"
+        margin: "6px 0 10px 0" /* Added bottom margin */
     },
     statusCard: {
         background: "#fff",
@@ -1707,7 +1707,7 @@ const styles = {
         color: "#7a4f9a"
     },
     warning: {
-        margin: "6px 0",
+        margin: "6px 0 10px 0", /* Added bottom margin */
         background: "#ffdede",
         color: "#c94b4b",
         padding: "8px",
@@ -1716,7 +1716,7 @@ const styles = {
         fontSize: "11px"
     },
     notification: {
-        margin: "6px 0",
+        margin: "6px 0 10px 0", /* Added bottom margin */
         background: "#dcfce7",
         color: "#16a34a",
         padding: "8px",
@@ -1734,13 +1734,14 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "2px",
-        padding: "2px",
+        gap: "4px", /* Increased gap */
+        padding: "4px", /* Increased padding */
         maxWidth: "350px",
-        margin: "0 auto"
+        margin: "0 auto 15px auto" /* Added bottom margin */
     },
     staticCell: {
-        aspectRatio: "1",
+        width: "28px", /* Reduced box size */
+        height: "28px", /* Reduced box size */
         borderRadius: "4px",
         background: "#ead9f2",
         display: "flex",
@@ -1748,7 +1749,7 @@ const styles = {
         justifyContent: "center",
         fontWeight: "600",
         color: "#6a2f6a",
-        fontSize: "10px",
+        fontSize: "14px", /* Normal font size */
         boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
         cursor: "pointer",
         transition: "all 0.3s ease"
@@ -1881,9 +1882,10 @@ const styles = {
         justifyContent: "space-between",
         background: "white",
         borderRadius: "0",
-        padding: "8px 10px",
+        padding: "6px 10px", /* Reduced padding */
         zIndex: 1000,
-        borderTop: "1px solid #e5e7eb"
+        borderTop: "1px solid #e5e7eb",
+        height: "40px" /* Explicitly set height */
     },
     tabItem: {
         textAlign: "center",
@@ -1894,10 +1896,11 @@ const styles = {
         transition: "all 0.2s ease"
     },
     tabIcon: {
-        fontSize: "20px"
+        fontSize: "16px" /* Reduced icon size */
     },
     tabLabel: {
-        marginTop: "4px"
+        marginTop: "2px", /* Reduced margin */
+        fontSize: "10px" /* Reduced label font size */
     },
     tabContent: {
         backgroundColor: "white",
@@ -1926,7 +1929,8 @@ const styles = {
         background: "rgba(0, 0, 0, 0.8)",
         borderRadius: "15px",
         overflow: "hidden",
-        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)"
+        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
+        marginBottom: "15px" /* Added bottom margin */
     },
     statusBar: {
         background: "#0d1526",
