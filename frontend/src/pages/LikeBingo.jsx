@@ -1337,11 +1337,13 @@ const LikeBingo = () => {
                     <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
                 </div>
 
-                {/* Scrollable Content Area */}
+                {/* Content Area - Fixed height, no scrolling */}
                 <div style={{
                     flex: 1,
-                    overflowY: 'auto',
-                    paddingBottom: '10px'
+                    overflowY: 'hidden',
+                    overflowX: 'hidden',
+                    paddingBottom: '60px',
+                    marginBottom: '0'
                 }}>
 
                     {/* Debug Info - Remove this after fixing */}
@@ -1423,28 +1425,30 @@ const LikeBingo = () => {
                                     {/* Static Grid */}
                                     {renderStaticGrid()}
 
-                                    {/* Bottom Row: Mini Card + Buttons */}
-                                    <div style={styles.bottomRow}>
-                                        {/* Mini Bingo Card (24% width) */}
-                                        {renderMiniBingoCard()}
+                                    {/* Bottom Row: Mini Card + Buttons (only show if number selected) */}
+                                    {hasSelectedNumber && (
+                                        <div style={styles.bottomRow}>
+                                            {/* Mini Bingo Card (24% width) */}
+                                            {renderMiniBingoCard()}
 
-                                        {/* Action Buttons (66% width) */}
-                                        <div style={styles.actionButtons}>
-                                            <button
-                                                style={{ ...styles.button, backgroundColor: "#2f88ff" }}
-                                                onClick={refreshCard}
-                                            >
-                                                Refresh
-                                            </button>
-                                            <button
-                                                style={{ ...styles.button, backgroundColor: "#FF4500" }}
-                                                onClick={startGame}
-                                                disabled={isLoading}
-                                            >
-                                                {isLoading ? 'Starting...' : 'Start Game'}
-                                            </button>
+                                            {/* Action Buttons (66% width) */}
+                                            <div style={styles.actionButtons}>
+                                                <button
+                                                    style={{ ...styles.button, backgroundColor: "#2f88ff" }}
+                                                    onClick={refreshCard}
+                                                >
+                                                    Refresh
+                                                </button>
+                                                <button
+                                                    style={{ ...styles.button, backgroundColor: "#FF4500" }}
+                                                    onClick={startGame}
+                                                    disabled={isLoading}
+                                                >
+                                                    {isLoading ? 'Starting...' : 'Start Game'}
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </>
                             )}
 
@@ -1620,21 +1624,29 @@ const LikeBingo = () => {
 const styles = {
     container: {
         minHeight: "100vh",
+        maxHeight: "100vh",
+        height: "100vh",
         display: "flex",
-        alignItems: "flex-start",
+        alignItems: "center",
         justifyContent: "center",
         background: "#e9d9f0",
-        padding: "18px 0",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        padding: "0",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        overflow: "hidden"
     },
     appShell: {
-        width: "390px",
+        width: "100%",
+        maxWidth: "390px",
+        height: "100vh",
+        maxHeight: "100vh",
         background: "#b992c9",
-        borderRadius: "10px",
+        borderRadius: "0",
         boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
         overflow: "hidden",
-        padding: "12px 14px 80px",
-        position: "relative"
+        padding: "12px 14px 0",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column"
     },
     header: {
         display: "flex",
@@ -1720,21 +1732,22 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "4px",
-        padding: "8px"
+        gap: "3px",
+        padding: "4px",
+        maxWidth: "360px",
+        margin: "0 auto"
     },
     staticCell: {
-        width: "34px",
-        height: "34px",
-        borderRadius: "8px",
+        aspectRatio: "1",
+        borderRadius: "6px",
         background: "#ead9f2",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontWeight: "600",
         color: "#6a2f6a",
-        fontSize: "13px",
-        boxShadow: "0 2px 0 rgba(0,0,0,0.06)",
+        fontSize: "11px",
+        boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
         cursor: "pointer",
         transition: "all 0.3s ease"
     },
@@ -1855,15 +1868,19 @@ const styles = {
         cursor: "pointer"
     },
     tabBar: {
-        position: "absolute",
-        left: "12px",
-        right: "12px",
-        bottom: "10px",
+        position: "fixed",
+        left: "0",
+        right: "0",
+        bottom: "0",
+        maxWidth: "390px",
+        margin: "0 auto",
         display: "flex",
         justifyContent: "space-between",
         background: "white",
-        borderRadius: "12px",
-        padding: "8px 10px"
+        borderRadius: "0",
+        padding: "8px 10px",
+        zIndex: 1000,
+        borderTop: "1px solid #e5e7eb"
     },
     tabItem: {
         textAlign: "center",
@@ -1884,8 +1901,10 @@ const styles = {
         borderRadius: "12px",
         padding: "15px",
         margin: "8px 0",
-        maxHeight: "calc(100vh - 200px)",
-        overflowY: "auto"
+        height: "calc(100vh - 220px)",
+        maxHeight: "calc(100vh - 220px)",
+        overflowY: "auto",
+        overflowX: "hidden"
     },
     scoreItem: {
         display: "flex",
