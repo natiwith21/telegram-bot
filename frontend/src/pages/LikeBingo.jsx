@@ -1734,14 +1734,14 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "4px", /* Increased gap */
-        padding: "4px", /* Increased padding */
-        maxWidth: "350px",
-        margin: "0 auto 15px auto" /* Added bottom margin */
+        gap: "2px", /* Reduced gap */
+        padding: "2px", /* Reduced padding */
+        maxWidth: "370px", /* Increased max width */
+        margin: "0 auto 15px auto"
     },
     staticCell: {
-        width: "28px", /* Reduced box size */
-        height: "28px", /* Reduced box size */
+        width: "30px", /* Increased box size */
+        height: "30px", /* Increased box size */
         borderRadius: "4px",
         background: "#ead9f2",
         display: "flex",
@@ -1749,7 +1749,7 @@ const styles = {
         justifyContent: "center",
         fontWeight: "600",
         color: "#6a2f6a",
-        fontSize: "14px", /* Normal font size */
+        fontSize: "14px",
         boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
         cursor: "pointer",
         transition: "all 0.3s ease"
@@ -1842,7 +1842,7 @@ const styles = {
     actionButtons: {
         display: "flex",
         justifyContent: "flex-end",
-        gap: "6px",
+        gap: "8px", /* Increased gap */
         width: "66%"
     },
     buttonRow: {
@@ -1853,10 +1853,10 @@ const styles = {
     },
     button: {
         border: "none",
-        padding: "8px 10px",
+        padding: "10px 14px", /* Increased padding */
         borderRadius: "20px",
         fontWeight: "700",
-        fontSize: "13px",
+        fontSize: "14px", /* Increased font size */
         cursor: "pointer",
         color: "#fff",
         transition: "all 0.2s ease"
