@@ -581,6 +581,26 @@ const LikeBingo = () => {
                     })
                 });
 
+                // Check if response is OK before processing
+                if (!response.ok) {
+                    const responseText = await response.text();
+                    console.error('❌ API Error Response:', response.status, response.statusText);
+                    console.error('Response body:', responseText.substring(0, 500));
+
+                    // Provide user-friendly error messages based on status
+                    if (response.status === 401) {
+                        throw new Error('Authentication failed. Please refresh the page and try again.');
+                    } else if (response.status === 403) {
+                        throw new Error('Access denied. Please check your account status.');
+                    } else if (response.status === 500) {
+                        throw new Error('Server error. Please try again in a few moments.');
+                    } else if (response.status >= 400 && response.status < 500) {
+                        throw new Error(`Client error (${response.status}). Please check your connection.`);
+                    } else {
+                        throw new Error(`Server error (${response.status}). Please try again later.`);
+                    }
+                }
+
                 const responseText = await response.text(); // Get raw response text
                 console.log('Raw API response for like-bingo-join:', responseText);
 
@@ -589,7 +609,14 @@ const LikeBingo = () => {
                     data = JSON.parse(responseText); // Attempt to parse as JSON
                 } catch (jsonError) {
                     console.error('Failed to parse API response as JSON:', jsonError);
-                    throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`);
+                    console.error('Response was:', responseText);
+
+                    // Check if it's HTML error page
+                    if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html>')) {
+                        throw new Error('Server returned an error page. Please try again later or contact support.');
+                    } else {
+                        throw new Error(`Invalid server response. Please try again.`);
+                    }
                 }
 
                 if (data.success) {
@@ -599,7 +626,7 @@ const LikeBingo = () => {
                 } else {
                     throw new Error(data.error || 'Failed to join bingo session');
                 }
-            } else {
+            }
                 // Demo mode - start immediately with local countdown
                 setGameState('countdown');
                 startCountdown();
