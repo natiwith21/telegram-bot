@@ -581,7 +581,17 @@ const LikeBingo = () => {
                     })
                 });
 
-                const data = await response.json();
+                const responseText = await response.text(); // Get raw response text
+                console.log('Raw API response for like-bingo-join:', responseText);
+
+                let data;
+                try {
+                    data = JSON.parse(responseText); // Attempt to parse as JSON
+                } catch (jsonError) {
+                    console.error('Failed to parse API response as JSON:', jsonError);
+                    throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`);
+                }
+
                 if (data.success) {
                     console.log('✅ Joined shared bingo session:', data.sessionId);
                     // The WebSocket will handle the game start and countdown
@@ -1734,14 +1744,14 @@ const styles = {
         width: "100%",
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
-        gap: "2px", /* Reduced gap */
-        padding: "2px", /* Reduced padding */
-        maxWidth: "370px", /* Increased max width */
+        gap: "4px", /* Increased gap for more space */
+        padding: "4px", /* Increased padding */
+        maxWidth: "370px",
         margin: "0 auto 15px auto"
     },
     staticCell: {
-        width: "30px", /* Increased box size */
-        height: "30px", /* Increased box size */
+        width: "32px", /* Slightly increased box size */
+        height: "32px", /* Slightly increased box size */
         borderRadius: "4px",
         background: "#ead9f2",
         display: "flex",
@@ -1749,7 +1759,7 @@ const styles = {
         justifyContent: "center",
         fontWeight: "600",
         color: "#6a2f6a",
-        fontSize: "14px",
+        fontSize: "16px", /* Increased font size for numbers */
         boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
         cursor: "pointer",
         transition: "all 0.3s ease"
