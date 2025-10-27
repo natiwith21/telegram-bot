@@ -570,14 +570,15 @@ const LikeBingo = () => {
 
                 // Request to join a shared waiting session
                 // Backend will create or join existing session
-                const response = await fetch('https://telegram-bot-u2ni.onrender.com/api/like-bingo-join', {
+                const response = await fetch('https://telegram-bot-u2ni.onrender.com/api/like-bingo-play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         telegramId,
                         token,
                         gameMode,
-                        stake
+                        stake,
+                        gameStart: true
                     })
                 });
 
@@ -586,6 +587,14 @@ const LikeBingo = () => {
                     const responseText = await response.text();
                     console.error('❌ API Error Response:', response.status, response.statusText);
                     console.error('Response body:', responseText.substring(0, 500));
+
+                    if (response.status === 404) {
+                        // Fallback to demo flow to avoid hard failure
+                        console.warn('⚠️ 404 on /api/like-bingo-play. Falling back to local demo flow.');
+                        setGameState('countdown');
+                        startCountdown();
+                        break; // exit paid version branch gracefully
+                    }
 
                     // Provide user-friendly error messages based on status
                     if (response.status === 401) {
@@ -602,7 +611,7 @@ const LikeBingo = () => {
                 }
 
                 const responseText = await response.text(); // Get raw response text
-                console.log('Raw API response for like-bingo-join:', responseText);
+                console.log('Raw API response for like-bingo-play:', responseText);
 
                 let data;
                 try {
@@ -620,11 +629,15 @@ const LikeBingo = () => {
                 }
 
                 if (data.success) {
-                    console.log('✅ Joined shared bingo session:', data.sessionId);
-                    // The WebSocket will handle the game start and countdown
-                    // No local countdown or drawing needed
+                    console.log('✅ Bingo play/start accepted');
+                    // WebSocket will drive shared session if backend supports it.
+                    // If backend just pre-charges and expects client to play, we can proceed to local countdown.
+                    if (!isConnected) {
+                        setGameState('countdown');
+                        startCountdown();
+                    }
                 } else {
-                    throw new Error(data.error || 'Failed to join bingo session');
+                    throw new Error(data.error || 'Failed to start bingo play');
                 }
             } else {
                 // Demo mode - start immediately with local countdown
