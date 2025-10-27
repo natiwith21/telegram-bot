@@ -1995,22 +1995,32 @@ const styles = {
     bingoCardHeader: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "3px",
-        marginBottom: "5px"
+        gap: "2px",
+        marginBottom: "3px"
+    },
+    headerCell: {
+        textAlign: "center",
+        padding: "3px 0",
+        fontWeight: "bold",
+        fontSize: "12px",
+        background: "linear-gradient(to bottom, #2a3a5a, #1a2a4a)",
+        borderRadius: "3px",
+        textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
+        color: "#fff"
     },
     fullBingoGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "3px"
+        gap: "2px"
     },
     numberCell: {
         background: "#1a2a4a",
-        borderRadius: "4px",
-        height: "25px",
+        borderRadius: "3px",
+        height: "18px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "12px",
+        fontSize: "10px",
         fontWeight: "500",
         transition: "all 0.3s ease"
     },
