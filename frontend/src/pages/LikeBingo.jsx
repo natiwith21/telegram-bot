@@ -1954,12 +1954,13 @@ const styles = {
     },
     statusBar: {
         background: "#0d1526",
-        padding: "10px 15px",
+        padding: "6px 10px",
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "8px",
-        fontSize: "12px",
-        borderBottom: "1px solid #2a3a5a"
+        gap: "6px",
+        fontSize: "11px",
+        borderBottom: "1px solid #2a3a5a",
+        minHeight: "32px"
     },
     statusItem: {
         display: "flex",
@@ -1969,26 +1970,27 @@ const styles = {
     },
     bingoTitle: {
         textAlign: "center",
-        padding: "8px",
-        fontSize: "20px",
+        padding: "4px 8px",
+        fontSize: "18px",
         fontWeight: "bold",
-        letterSpacing: "2px",
+        letterSpacing: "1px",
         background: "linear-gradient(to right, #ff8a00, #ff0080, #00b3ff)",
         WebkitBackgroundClip: "text",
         WebkitTextFillColor: "transparent",
-        textShadow: "0 0 10px rgba(255, 255, 255, 0.2)"
+        textShadow: "0 0 10px rgba(255, 255, 255, 0.2)",
+        margin: "2px 0"
     },
     mainContent: {
         display: "flex",
-        padding: "8px",
-        gap: "8px"
+        padding: "4px",
+        gap: "4px"
     },
     fullBingoCard: {
         flex: "1 1 50%",
         background: "#0d1526",
-        padding: "10px",
-        borderRadius: "8px",
-        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)"
+        padding: "6px",
+        borderRadius: "6px",
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)"
     },
     bingoCardHeader: {
         display: "grid",
@@ -2016,15 +2018,15 @@ const styles = {
         flex: "1 1 50%",
         display: "flex",
         flexDirection: "column",
-        gap: "10px"
+        gap: "6px"
     },
     controlPanel: {
         background: "#0d1526",
-        borderRadius: "8px",
-        padding: "10px",
+        borderRadius: "6px",
+        padding: "6px",
         textAlign: "center",
-        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)",
-        marginBottom: "8px"
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)",
+        marginBottom: "4px"
     },
     controlTitle: {
         fontSize: "14px",
@@ -2045,9 +2047,9 @@ const styles = {
     },
     currentCallPanel: {
         background: "#0d1526",
-        borderRadius: "8px",
-        padding: "10px",
-        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)"
+        borderRadius: "6px",
+        padding: "6px",
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)"
     },
     currentCallTitle: {
         textAlign: "center",
@@ -2084,35 +2086,35 @@ const styles = {
     },
     boardNumber: {
         textAlign: "center",
-        margin: "10px 0",
-        fontSize: "14px",
+        margin: "4px 0",
+        fontSize: "12px",
         color: "#ffcc00"
     },
     bingoSection: {
         background: "linear-gradient(to right, #ff8a00, #ff0080)",
-        padding: "12px",
+        padding: "8px",
         textAlign: "center",
-        margin: "8px",
-        borderRadius: "8px",
-        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)"
+        margin: "4px",
+        borderRadius: "6px",
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)"
     },
     bingoControls: {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "10px"
+        gap: "6px"
     },
     controlButtonsRow: {
         display: "flex",
         justifyContent: "center",
-        gap: "10px",
+        gap: "6px",
         flexWrap: "wrap"
     },
     refreshBingoBtn: {
-        padding: "10px 16px",
+        padding: "6px 12px",
         border: "none",
-        borderRadius: "16px",
-        fontSize: "14px",
+        borderRadius: "10px",
+        fontSize: "12px",
         fontWeight: "bold",
         cursor: "pointer",
         background: "#1a2a4a",
@@ -2120,15 +2122,15 @@ const styles = {
         transition: "all 0.3s",
         display: "flex",
         alignItems: "center",
-        gap: "4px",
-        minWidth: "100px",
+        gap: "2px",
+        minWidth: "80px",
         justifyContent: "center"
     },
     leaveBingoBtn: {
-        padding: "10px 16px",
+        padding: "6px 12px",
         border: "none",
-        borderRadius: "16px",
-        fontSize: "14px",
+        borderRadius: "10px",
+        fontSize: "12px",
         fontWeight: "bold",
         cursor: "pointer",
         background: "#ff3333",
@@ -2136,15 +2138,15 @@ const styles = {
         transition: "all 0.3s",
         display: "flex",
         alignItems: "center",
-        gap: "4px",
-        minWidth: "100px",
+        gap: "2px",
+        minWidth: "80px",
         justifyContent: "center"
     },
     claimBingoBtn: {
-        padding: "12px 24px",
+        padding: "8px 16px",
         border: "none",
-        borderRadius: "20px",
-        fontSize: "16px",
+        borderRadius: "12px",
+        fontSize: "14px",
         fontWeight: "bold",
         cursor: "pointer",
         background: "linear-gradient(to right, #00ff00, #ffff00)",
@@ -2152,19 +2154,19 @@ const styles = {
         transition: "all 0.3s",
         display: "flex",
         alignItems: "center",
-        gap: "6px",
-        boxShadow: "0 4px 15px rgba(0, 255, 0, 0.4)",
+        gap: "4px",
+        boxShadow: "0 2px 10px rgba(0, 255, 0, 0.4)",
         animation: "pulse 1s infinite",
-        minWidth: "160px",
+        minWidth: "120px",
         justifyContent: "center"
     },
     gameEndSection: {
         background: "linear-gradient(to right, #ff6b6b, #4ecdc4)",
-        padding: "20px",
+        padding: "12px",
         textAlign: "center",
-        margin: "10px",
-        borderRadius: "15px",
-        boxShadow: "0 8px 25px rgba(0, 0, 0, 0.3)"
+        margin: "6px",
+        borderRadius: "10px",
+        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)"
     },
     gameEndTitle: {
         fontSize: "24px",
@@ -2186,10 +2188,10 @@ const styles = {
         flexWrap: "wrap"
     },
     newGameBtn: {
-        padding: "12px 25px",
+        padding: "8px 16px",
         border: "none",
-        borderRadius: "20px",
-        fontSize: "16px",
+        borderRadius: "12px",
+        fontSize: "14px",
         fontWeight: "bold",
         cursor: "pointer",
         background: "linear-gradient(to right, #4CAF50, #45a049)",
@@ -2197,14 +2199,14 @@ const styles = {
         transition: "all 0.3s",
         display: "flex",
         alignItems: "center",
-        gap: "5px",
-        boxShadow: "0 4px 15px rgba(76, 175, 80, 0.4)"
+        gap: "3px",
+        boxShadow: "0 2px 10px rgba(76, 175, 80, 0.4)"
     },
     leaveGameBtn: {
-        padding: "12px 25px",
+        padding: "8px 16px",
         border: "none",
-        borderRadius: "20px",
-        fontSize: "16px",
+        borderRadius: "12px",
+        fontSize: "14px",
         fontWeight: "bold",
         cursor: "pointer",
         background: "linear-gradient(to right, #ff6b6b, #ff5252)",
@@ -2212,8 +2214,8 @@ const styles = {
         transition: "all 0.3s",
         display: "flex",
         alignItems: "center",
-        gap: "5px",
-        boxShadow: "0 4px 15px rgba(255, 107, 107, 0.4)"
+        gap: "3px",
+        boxShadow: "0 2px 10px rgba(255, 107, 107, 0.4)"
     }
 };
 
