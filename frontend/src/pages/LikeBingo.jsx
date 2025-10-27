@@ -1475,6 +1475,7 @@ const LikeBingo = () => {
                                 <>
                                     {/* Static Grid */}
                                     {renderStaticGrid()}
+                                    
 
                                     {/* Bottom Row: Mini Card + Buttons (only show if number selected) */}
                                     {hasSelectedNumber && (
