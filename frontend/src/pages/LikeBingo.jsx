@@ -530,127 +530,97 @@ const LikeBingo = () => {
     };
 
     const startGame = async () => {
-        if (gameState !== 'setup') return;
-
-        // Check balance before starting
-        if (userBalance < stake) {
-            setShowWarning(true);
-            alert('❌ Insufficient balance! Please top up your wallet.');
-            return;
-        }
-
-        if (gameMode === 'demo') {
-            // For demo mode, start countdown immediately
-            setGameState('countdown');
-            startCountdown();
-            return;
-        }
-
-        if (!telegramId) {
-            alert('❌ Cannot start game: Missing Telegram ID');
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            // Generate and send selected numbers to backend
-            const selectedNumbers = [];
-            while (selectedNumbers.length < 5) {
-                const num = Math.floor(Math.random() * 100) + 1;
-                if (!selectedNumbers.includes(num)) {
-                    selectedNumbers.push(num);
-                }
-            }
-
-            const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
-
-            if (isPaidVersion) {
-                // For paid versions, use shared multiplayer session via WebSocket
-                console.log('🎮 Starting shared multiplayer bingo...');
-
-                // Request to join a shared waiting session
-                // Backend will create or join existing session
-                const response = await fetch('https://telegram-bot-u2ni.onrender.com/api/like-bingo-play', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        telegramId,
-                        token,
-                        gameMode,
-                        stake,
-                        gameStart: true
-                    })
-                });
-
-                // Check if response is OK before processing
-                if (!response.ok) {
-                    const responseText = await response.text();
-                    console.error('❌ API Error Response:', response.status, response.statusText);
-                    console.error('Response body:', responseText.substring(0, 500));
-
-                    if (response.status === 404) {
-                        // Fallback to demo flow to avoid hard failure
-                        console.warn('⚠️ 404 on /api/like-bingo-play. Falling back to local demo flow.');
-                        setGameState('countdown');
-                        startCountdown();
-                        break; // exit paid version branch gracefully
-                    }
-
-                    // Provide user-friendly error messages based on status
-                    if (response.status === 401) {
-                        throw new Error('Authentication failed. Please refresh the page and try again.');
-                    } else if (response.status === 403) {
-                        throw new Error('Access denied. Please check your account status.');
-                    } else if (response.status === 500) {
-                        throw new Error('Server error. Please try again in a few moments.');
-                    } else if (response.status >= 400 && response.status < 500) {
-                        throw new Error(`Client error (${response.status}). Please check your connection.`);
-                    } else {
-                        throw new Error(`Server error (${response.status}). Please try again later.`);
-                    }
-                }
-
-                const responseText = await response.text(); // Get raw response text
-                console.log('Raw API response for like-bingo-play:', responseText);
-
-                let data;
-                try {
-                    data = JSON.parse(responseText); // Attempt to parse as JSON
-                } catch (jsonError) {
-                    console.error('Failed to parse API response as JSON:', jsonError);
-                    console.error('Response was:', responseText);
-
-                    // Check if it's HTML error page
-                    if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html>')) {
-                        throw new Error('Server returned an error page. Please try again later or contact support.');
-                    } else {
-                        throw new Error(`Invalid server response. Please try again.`);
-                    }
-                }
-
-                if (data.success) {
-                    console.log('✅ Bingo play/start accepted');
-                    // WebSocket will drive shared session if backend supports it.
-                    // If backend just pre-charges and expects client to play, we can proceed to local countdown.
-                    if (!isConnected) {
-                        setGameState('countdown');
-                        startCountdown();
-                    }
-                } else {
-                    throw new Error(data.error || 'Failed to start bingo play');
-                }
-            } else {
-                // Demo mode - start immediately with local countdown
-                setGameState('countdown');
-                startCountdown();
-            }
-        } catch (error) {
-            console.error('Failed to start game:', error);
-            alert(`❌ Failed to start game: ${error.message}`);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+         // For demo mode, skip balance checks
+         if (gameMode === 'demo') {
+             setGameNumber(prev => prev + 1);
+             setGameState('playing');
+             startDrawing();
+             return;
+         }
+ 
+         if (userBalance < stake) {
+             setShowWarning(true);
+             return;
+         }
+ 
+         setIsLoading(true);
+ 
+         try {
+             // For demo mode or if no telegramId, skip API call
+             if (!telegramId) {
+                 // Demo mode - just proceed without balance changes
+                 console.log('🎮 No telegramId - starting demo game without balance effects');
+                 setGameNumber(prev => prev + 1);
+                 setGameState('playing');
+                 startDrawing();
+                 setIsLoading(false);
+                 return;
+             }
+ 
+             // For Like Bingo, select 10 random numbers from 1-100
+             const selectedNumbers = [];
+             while (selectedNumbers.length < 10) {
+                 const num = Math.floor(Math.random() * 100) + 1;
+                 if (!selectedNumbers.includes(num)) {
+                     selectedNumbers.push(num);
+                 }
+             }
+ 
+             // Send shared multiplayer game start request via WebSocket (ONLY for paid versions)
+             const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
+ 
+             if (isConnected && isPaidVersion) {
+                 console.log(`🌐 Starting shared multiplayer Bingo ${gameMode}`);
+                 sendMessage({
+                     type: 'start_multiplayer_game',
+                     telegramId,
+                     selectedNumbers,
+                     stake,
+                     token,
+                     gameMode
+                 });
+ 
+                 console.log('🎮 Starting shared multiplayer game - balance will be updated on game end only');
+                 setGameNumber(prev => prev + 1);
+                 // Don't set game state here - wait for WebSocket response
+                 setIsLoading(false);
+                 return;
+             }
+ 
+             // Fallback to local game if WebSocket not connected - NO API CALLS
+             if (gameMode !== 'demo') {
+                 // Check if user has sufficient balance before starting
+                 if (userBalance < stake) {
+                     alert(`Insufficient balance! You have ${userBalance} coins but need ${stake} coins to play.`);
+                     setIsLoading(false);
+                     return;
+                 }
+ 
+                 console.log('💰 Starting paid game locally - balance will be processed on game end only');
+                 showBalanceNotification(`🎮 Game started! ${stake} coins at risk`, 'info');
+             } else {
+                 console.log('🎮 Starting demo game - no balance effects');
+                 showBalanceNotification(`🎮 Demo game started!`, 'info');
+             }
+ 
+             setGameNumber(prev => prev + 1);
+             setGameState('playing');
+             startDrawing();
+         } catch (error) {
+             console.error('Game start error:', error);
+ 
+             if (gameMode === 'demo') {
+                 // For demo, proceed anyway without balance changes
+                 setGameNumber(prev => prev + 1);
+                 setGameState('playing');
+                 startDrawing();
+             } else {
+                 alert('Failed to start game. Please try again.');
+             }
+         } finally {
+             setIsLoading(false);
+         }
+     };
 
     const startCountdown = () => {
         let count = 5;
