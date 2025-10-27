@@ -626,7 +626,7 @@ const LikeBingo = () => {
                 } else {
                     throw new Error(data.error || 'Failed to join bingo session');
                 }
-            }
+            } else {
                 // Demo mode - start immediately with local countdown
                 setGameState('countdown');
                 startCountdown();
