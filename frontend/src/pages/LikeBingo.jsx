@@ -1340,14 +1340,14 @@ const LikeBingo = () => {
                     <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
                 </div>
 
-                {/* Content Area - Fixed height, no scrolling */}
+                {/* Content Area - Optimized for mobile */}
                 <div style={{
                     flex: 1,
-                    overflowY: 'hidden',
+                    overflowY: 'auto',
                     overflowX: 'hidden',
-                    paddingBottom: '40px', /* Reduced padding to accommodate smaller tab bar */
-                    marginBottom: '0',
-                    maxHeight: 'calc(100vh - 90px)' /* Adjusted max height */
+                    padding: '0 0 60px 0',
+                    width: '100%',
+                    boxSizing: 'border-box'
                 }}>
 
                     {/* Debug Info - Remove this after fixing */}
@@ -1563,11 +1563,11 @@ const LikeBingo = () => {
 
                 {/* Bottom Menu */}
                 <div style={styles.bottomMenu}>
-                    <div style={styles.bottomMenuItem}>🎮 Game</div>
-                    <div style={styles.bottomMenuItem}>🏆 Scores</div>
-                    <div style={styles.bottomMenuItem}>🕓 History</div>
-                    <div style={styles.bottomMenuItem}>💰 Wallet</div>
-                    <div style={styles.bottomMenuItem}>👤 Profile</div>
+                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Game')}>🎮 Game</div>
+                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Scores')}>🏆 Scores</div>
+                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('History')}>🕓 History</div>
+                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Wallet')}>💰 Wallet</div>
+                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Profile')}>👤 Profile</div>
                 </div>
             </div>
         </div>
@@ -1578,7 +1578,6 @@ const LikeBingo = () => {
 const styles = {
     container: {
         minHeight: "100vh",
-        maxHeight: "100vh",
         height: "100vh",
         display: "flex",
         alignItems: "center",
@@ -1590,18 +1589,16 @@ const styles = {
     },
     appShell: {
         width: "100%",
-        maxWidth: "460px",
+        maxWidth: "100vw",
         height: "100vh",
-        maxHeight: "100vh",
         background: "#c39cd9",
-        borderRadius: "12px",
-        boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+        borderRadius: "0",
         overflow: "hidden",
-        padding: "10px",
-        position: "relative",
+        padding: "8px",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center"
+        alignItems: "center",
+        boxSizing: "border-box"
     },
     header: {
         display: "flex",
@@ -1642,12 +1639,12 @@ const styles = {
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
         textAlign: "center",
-        gap: "6px",
-        fontSize: "11px",
+        gap: "4px",
+        fontSize: "10px",
         fontWeight: "500",
         color: "#1c1c2e",
-        padding: "6px 0",
-        margin: "0 0 6px 0"
+        padding: "4px 0",
+        margin: "0 0 4px 0"
     },
     statusCard: {
         background: "transparent",
@@ -1825,20 +1822,27 @@ const styles = {
         cursor: "pointer"
     },
     bottomMenu: {
+        position: "fixed",
+        bottom: "0",
+        left: "0",
+        right: "0",
         display: "flex",
         justifyContent: "space-around",
         background: "white",
         width: "100%",
-        marginTop: "15px",
-        padding: "0",
-        borderRadius: "0"
+        padding: "8px 0",
+        borderRadius: "0",
+        zIndex: "1000",
+        borderTop: "1px solid #e5e7eb"
     },
     bottomMenuItem: {
-        fontSize: "12px",
+        fontSize: "11px",
         color: "#333",
         textAlign: "center",
         flex: "1",
-        padding: "10px 0"
+        padding: "6px 0",
+        cursor: "pointer",
+        transition: "all 0.2s ease"
     },
     tabContent: {
         backgroundColor: "white",
@@ -1880,17 +1884,18 @@ const styles = {
         display: "flex",
         justifyContent: "space-between",
         width: "100%",
-        gap: "6px",
-        marginTop: "6px"
+        gap: "4px",
+        marginTop: "4px",
+        padding: "0 2px"
     },
     fullBingoCard: {
         flex: "1",
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "5px",
+        gap: "3px",
         background: "rgba(255,255,255,0.2)",
-        padding: "8px",
-        borderRadius: "10px"
+        padding: "6px",
+        borderRadius: "8px"
     },
     bingoCardHeader: {
         gridColumn: "span 5",
@@ -1906,36 +1911,42 @@ const styles = {
     fullBingoGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "5px"
+        gap: "2px"
     },
     numberCell: {
         background: "rgba(255,255,255,0.5)",
         textAlign: "center",
-        padding: "4px 0",
-        borderRadius: "4px",
-        fontSize: "12px",
+        padding: "2px 0",
+        borderRadius: "3px",
+        fontSize: "10px",
         fontWeight: "500",
         color: "#333",
+        height: "20px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         transition: "all 0.3s ease"
     },
     rightPanel: {
         flex: "1",
         background: "rgba(255,255,255,0.2)",
-        padding: "8px",
-        borderRadius: "10px",
-        textAlign: "center"
+        padding: "6px",
+        borderRadius: "8px",
+        textAlign: "center",
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px"
     },
     controlPanel: {
         background: "#b080d0",
         color: "white",
-        borderRadius: "6px",
-        padding: "6px",
-        marginBottom: "6px",
-        fontSize: "13px",
+        borderRadius: "5px",
+        padding: "4px",
+        fontSize: "12px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "4px"
+        gap: "2px"
     },
     controlTitle: {
         fontSize: "13px",
@@ -1956,13 +1967,15 @@ const styles = {
     },
     currentCallPanel: {
         background: "#9a6cc3",
-        borderRadius: "10px",
-        padding: "6px",
+        borderRadius: "8px",
+        padding: "4px",
         color: "white",
+        flex: "1",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center"
+        justifyContent: "center",
+        gap: "2px"
     },
     currentCallTitle: {
         textAlign: "center",
@@ -1974,15 +1987,20 @@ const styles = {
     playerCardGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "4px"
+        gap: "2px",
+        width: "100%"
     },
     playerCardCell: {
         background: "rgba(255,255,255,0.8)",
-        borderRadius: "6px",
-        padding: "6px 0",
+        borderRadius: "4px",
+        padding: "4px 0",
         fontWeight: "600",
-        fontSize: "13px",
-        color: "#333"
+        fontSize: "11px",
+        color: "#333",
+        height: "16px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
     },
     calledNumberCell: {
         background: "#1a2a4a",
@@ -2004,25 +2022,25 @@ const styles = {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        marginTop: "15px",
-        gap: "10px"
+        marginTop: "8px",
+        gap: "6px"
     },
     bingoControls: {
-        width: "80%",
+        width: "85%",
         background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
         border: "none",
         color: "white",
-        padding: "12px",
-        borderRadius: "20px",
+        padding: "10px",
+        borderRadius: "18px",
         fontWeight: "bold",
-        fontSize: "16px",
+        fontSize: "14px",
         cursor: "pointer"
     },
     controlButtonsRow: {
-        width: "80%",
+        width: "85%",
         display: "flex",
         justifyContent: "space-between",
-        gap: "10px"
+        gap: "8px"
     },
     refreshBingoBtn: {
         flex: "1",
@@ -2060,8 +2078,8 @@ const styles = {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        marginTop: "15px",
-        gap: "10px"
+        marginTop: "8px",
+        gap: "6px"
     },
     gameEndTitle: {
         fontSize: "16px",
@@ -2075,10 +2093,10 @@ const styles = {
         marginBottom: "15px"
     },
     gameEndButtons: {
-        width: "80%",
+        width: "85%",
         display: "flex",
         justifyContent: "space-between",
-        gap: "10px"
+        gap: "8px"
     },
     newGameBtn: {
         flex: "1",
