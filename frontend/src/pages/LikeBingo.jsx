@@ -2008,12 +2008,12 @@ const styles = {
     leftBoardCell: {
     background: "rgba(255,255,255,0.5)",
     textAlign: "center",
-    padding: "1px 0",
+    padding: "2px 0",
     borderRadius: "4px",
-    fontSize: "10px",
+    fontSize: "11px",
     fontWeight: "500",
     color: "#333",
-    height: "12px",
+    height: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center"
@@ -2040,17 +2040,17 @@ const styles = {
     background: "#b080d0",
     color: "white",
     borderRadius: "6px",
-    padding: "4px",
-    marginBottom: "4px",
+    padding: "5px",
+    marginBottom: "5px",
     fontSize: "12px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "2px"
+    gap: "3px"
     },
     countBox: {
-    width: "36px",
-    height: "24px",
+    width: "38px",
+    height: "26px",
     background: "white",
     color: "#1c1c2e",
     display: "flex",
@@ -2058,7 +2058,7 @@ const styles = {
     justifyContent: "center",
     borderRadius: "6px",
     fontWeight: "bold",
-        fontSize: "11px"
+    fontSize: "11px"
     },
     currentCallSection: {
     background: "#9a6cc3",
@@ -2071,8 +2071,8 @@ const styles = {
         justifyContent: "center"
     },
     callCircle: {
-    width: "36px",
-    height: "36px",
+    width: "38px",
+    height: "38px",
     background: "orange",
     borderRadius: "50%",
     color: "white",
@@ -2080,8 +2080,8 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "bold",
-        marginTop: "4px",
-        fontSize: "12px"
+    marginTop: "4px",
+    fontSize: "12px"
     },
     smallBoard: {
     background: "rgba(255,255,255,0.3)",
@@ -2108,14 +2108,14 @@ const styles = {
     boardGridCell: {
     background: "rgba(255,255,255,0.8)",
     borderRadius: "4px",
-    padding: "4px 0",
+    padding: "5px 0",
     fontWeight: "600",
     fontSize: "11px",
     color: "#333",
-        height: "16px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
+    height: "18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
     },
     centerCell: {
         background: "#34793e",
@@ -2139,7 +2139,7 @@ const styles = {
     background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
     border: "none",
     color: "white",
-    padding: "8px",
+    padding: "10px",
     borderRadius: "20px",
     fontWeight: "bold",
     fontSize: "14px",
