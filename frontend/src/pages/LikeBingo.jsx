@@ -1604,13 +1604,16 @@ const LikeBingo = () => {
                                         </div>
                                     </div>
 
-                                    <div style={styles.bottomButtons}>
-                                        <button style={styles.bingoBtn} onClick={claimBingo}>Bingo</button>
-                                        <div style={styles.bottomRow}>
-                                            <button style={styles.refreshBtnNew} onClick={refreshCard}>Refresh</button>
-                                            <button style={styles.leaveBtn} onClick={leaveGame}>Leave</button>
+                                    {/* Bottom Buttons - Hide when game finished */}
+                                    {gameState !== 'finished' && (
+                                        <div style={styles.bottomButtons}>
+                                            <button style={styles.bingoBtn} onClick={claimBingo}>Bingo</button>
+                                            <div style={styles.bottomRow}>
+                                                <button style={styles.refreshBtnNew} onClick={refreshCard}>Refresh</button>
+                                                <button style={styles.leaveBtn} onClick={leaveGame}>Leave</button>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     {/* Game End Section */}
                                     {gameState === 'finished' && (
