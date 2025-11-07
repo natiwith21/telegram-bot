@@ -1390,12 +1390,14 @@ const LikeBingo = () => {
     return (
         <div style={styles.container}>
             <div style={styles.appShell}>
-                {/* Header */}
-                <div style={styles.header}>
-                    <span style={styles.backBtn} onClick={() => navigate('/')}>👍</span>
-                    <span style={styles.title}>Like Bingo ⩔</span>
-                    <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
-                </div>
+                {/* Header - Hide in playing state */}
+                {!(currentTab === 'Game' && gameState === 'playing') && (
+                    <div style={styles.header}>
+                        <span style={styles.backBtn} onClick={() => navigate('/')}>👍</span>
+                        <span style={styles.title}>Like Bingo ⩔</span>
+                        <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
+                    </div>
+                )}
 
                 {/* Content Area - Fixed height, no scrolling */}
                 <div style={{
@@ -1404,7 +1406,7 @@ const LikeBingo = () => {
                     overflowX: 'hidden',
                     paddingBottom: '40px', /* Reduced padding to accommodate smaller tab bar */
                     marginBottom: '0',
-                    maxHeight: 'calc(100vh - 90px)' /* Adjusted max height */
+                    maxHeight: (currentTab === 'Game' && gameState === 'playing') ? 'calc(100vh - 50px)' : 'calc(100vh - 90px)' /* Expanded height when header hidden */
                 }}>
 
                     {/* Debug Info - Remove this after fixing */}
