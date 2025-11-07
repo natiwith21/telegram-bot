@@ -1041,12 +1041,21 @@ const LikeBingo = () => {
     };
 
     const renderFullBingoBoard = () => {
+        const ranges = [
+            [1, 15],   // B column: 1-15
+            [16, 30],  // I column: 16-30  
+            [31, 45],  // N column: 31-45
+            [46, 60],  // G column: 46-60
+            [61, 75]   // O column: 61-75
+        ];
+
         const cells = [];
 
         // Generate 15 rows × 5 columns = 75 numbers
         for (let row = 0; row < 15; row++) {
             for (let col = 0; col < 5; col++) {
-                const number = row + col * 15 + 1;
+                const [min, max] = ranges[col];
+                const number = min + row;
                 const isPlayerNumber = bingoCard.flat().includes(number);
                 const isCalled = drawnNumbers.includes(number);
                 const isCurrentCall = currentCall === number;
@@ -1056,8 +1065,10 @@ const LikeBingo = () => {
                         key={`${row}-${col}`}
                         style={{
                             ...styles.numberCell,
-                            background: isCalled ? 'linear-gradient(to bottom, #ff8a00, #ff0080)' : 'rgba(255,255,255,0.5)',
-                            color: isCalled ? '#fff' : '#333'
+                            background: isCalled ? 'linear-gradient(to bottom, #ff8a00, #ff0080)' : '#1a2a4a',
+                            color: isCalled ? '#fff' : '#a0a0a0',
+                            border: isCurrentCall ? '2px solid #ffff00' : 'none',
+                            boxShadow: isCurrentCall ? '0 0 10px #ffff00' : 'none'
                         }}
                     >
                         {number}
@@ -1084,11 +1095,16 @@ const LikeBingo = () => {
                     <div
                         key={cellKey}
                         style={{
-                            background: isFree ? '#34793e' : 'rgba(255,255,255,0.8)',
-                            color: isFree ? 'white' : '#333'
+                            ...styles.playerCardCell,
+                            background: isFree ? '#4ade80' :
+                                isWinning ? '#fbbf24' :
+                                    isMarked ? 'linear-gradient(to bottom, #ff8a00, #ff0080)' :
+                                        isCalled ? '#2a3a5a' : '#1a2a4a',
+                            color: (isMarked || isWinning || isFree || isCalled) ? '#fff' : '#a0a0a0',
+                            cursor: canClick ? 'pointer' : 'default',
+                            border: isWinning ? '2px solid #f59e0b' : 'none'
                         }}
                         onClick={() => handleBingoCardClick(rowIndex, colIndex, number)}
-                        className={isFree ? 'center' : ''}
                     >
                         {isFree ? '*' : number}
                     </div>
@@ -1110,6 +1126,7 @@ const LikeBingo = () => {
             <div
                 key={index}
                 style={{
+                    ...styles.calledNumberCell,
                     backgroundColor: num ? '#1a2a4a' : '#1a1a2a',
                     color: num ? '#fff' : '#555'
                 }}
@@ -1340,14 +1357,14 @@ const LikeBingo = () => {
                     <span style={styles.menuBtn} onClick={() => setShowMenu(!showMenu)}>⋮</span>
                 </div>
 
-                {/* Content Area - Optimized for mobile */}
+                {/* Content Area - Fixed height, no scrolling */}
                 <div style={{
                     flex: 1,
-                    overflowY: 'auto',
+                    overflowY: 'hidden',
                     overflowX: 'hidden',
-                    padding: '0 0 60px 0',
-                    width: '100%',
-                    boxSizing: 'border-box'
+                    paddingBottom: '40px', /* Reduced padding to accommodate smaller tab bar */
+                    marginBottom: '0',
+                    maxHeight: 'calc(100vh - 90px)' /* Adjusted max height */
                 }}>
 
                     {/* Debug Info - Remove this after fixing */}
@@ -1459,44 +1476,76 @@ const LikeBingo = () => {
 
                             {/* Live Bingo Hall (when game is playing) */}
                             {(gameState === 'playing' || gameState === 'finished') && (
-                                <>
-                                    {/* Top Bar */}
-                                    <div style={styles.statusGrid}>
-                                        <div>Game <strong>AU{gameNumber}321</strong></div>
-                                        <div>Derash -</div>
-                                        <div>Bonus <strong>Off</strong></div>
-                                        <div>Players -</div>
-                                        <div>Stake <strong>{stake}</strong></div>
-                                        <div>Call <strong>{drawnNumbers.length}</strong></div>
-                                        <div>Sound <strong>{soundEnabled ? '🔊' : '🔇'}</strong></div>
-                                        <div>Mode <strong>Bingo</strong></div>
+                                <div style={styles.bingoHallContainer}>
+                                    {/* Status Bar */}
+                                    <div style={styles.statusBar}>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Game</span>
+                                            <span style={styles.statusValue}>TV{gameNumber}321</span>
+                                        </div>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Derash</span>
+                                            <span style={styles.statusValue}>-</span>
+                                        </div>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Bonus</span>
+                                            <span style={styles.statusValue}>Off</span>
+                                        </div>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Players</span>
+                                            <span style={styles.statusValue}>-</span>
+                                        </div>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Stake</span>
+                                            <span style={styles.statusValue}>{stake}</span>
+                                        </div>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Call</span>
+                                            <span style={styles.statusValue}>{drawnNumbers.length}</span>
+                                        </div>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Sound</span>
+                                            <span style={styles.statusValue}>{soundEnabled ? 'On' : 'Off'}</span>
+                                        </div>
+                                        <div style={styles.statusItem}>
+                                            <span style={styles.statusLabel}>Mode</span>
+                                            <span style={styles.statusValue}>Bingo</span>
+                                        </div>
                                     </div>
 
-                                    <div style={styles.separator}></div>
+                                    {/* Title */}
+                                    <div style={styles.bingoTitle}>BINGO</div>
 
-                                    {/* Main Section */}
+                                    {/* Main Content */}
                                     <div style={styles.mainContent}>
+                                        {/* Left: Full Bingo Board (1-75) */}
                                         <div style={styles.fullBingoCard}>
+                                            {/* Header: B I N G O */}
                                             <div style={styles.bingoCardHeader}>
-                                                <span style={{ background: '#f7b733' }}>B</span>
-                                                <span style={{ background: '#6dd47e' }}>I</span>
-                                                <span style={{ background: '#5dc0f3' }}>N</span>
-                                                <span style={{ background: '#e94f37' }}>G</span>
-                                                <span style={{ background: '#9b59b6' }}>O</span>
+                                                <div style={styles.headerCell}>B</div>
+                                                <div style={styles.headerCell}>I</div>
+                                                <div style={styles.headerCell}>N</div>
+                                                <div style={styles.headerCell}>G</div>
+                                                <div style={styles.headerCell}>O</div>
                                             </div>
+
+                                            {/* Full board grid */}
                                             <div style={styles.fullBingoGrid}>
                                                 {renderFullBingoBoard()}
                                             </div>
                                         </div>
 
+                                        {/* Right Panel: Controls and Your Card */}
                                         <div style={styles.rightPanel}>
+                                            {/* Count Down */}
                                             <div style={styles.controlPanel}>
-                                                Count Down
+                                                <div style={styles.controlTitle}>Count Down</div>
                                                 <div style={styles.controlValue}>
                                                     {multiplayerCountdown !== null ? multiplayerCountdown : '-'}
                                                 </div>
                                             </div>
 
+                                            {/* Current Call */}
                                             <div style={styles.controlPanel}>
                                                 <div style={styles.controlTitle}>Current Call</div>
                                                 <div style={styles.controlValue}>
@@ -1504,29 +1553,33 @@ const LikeBingo = () => {
                                                 </div>
                                             </div>
 
+                                            {/* Your Card (5x5 mini grid) */}
                                             <div style={styles.currentCallPanel}>
                                                 <div style={styles.currentCallTitle}>Your Card</div>
                                                 <div style={styles.playerCardGrid}>
                                                     {renderPlayerBingoCard()}
                                                 </div>
-                                                <div style={{ marginTop: '6px', fontSize: '12px', color: '#333' }}>
-                                                    Board number {currentBoard}
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* Board Number */}
+                                    <div style={styles.boardNumber}>Board number {currentBoard}</div>
+
+                                    {/* Bottom Controls */}
                                     <div style={styles.bingoSection}>
-                                        <button style={styles.claimBingoBtn} onClick={claimBingo}>
-                                            Bingo
-                                        </button>
-                                        <div style={styles.controlButtonsRow}>
-                                            <button style={styles.refreshBingoBtn} onClick={refreshCard}>
-                                                Refresh
+                                        <div style={styles.bingoControls}>
+                                            <button style={styles.claimBingoBtn} onClick={claimBingo}>
+                                                🏆 Claim Bingo
                                             </button>
-                                            <button style={styles.leaveBingoBtn} onClick={leaveGame}>
-                                                Leave
-                                            </button>
+                                            <div style={styles.controlButtonsRow}>
+                                                <button style={styles.refreshBingoBtn} onClick={refreshCard}>
+                                                    🔄 Refresh
+                                                </button>
+                                                <button style={styles.leaveBingoBtn} onClick={leaveGame}>
+                                                    🚪 Leave
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1551,7 +1604,7 @@ const LikeBingo = () => {
                                             </div>
                                         </div>
                                     )}
-                                </>
+                                </div>
                             )}
                         </>
                     )}
@@ -1561,44 +1614,61 @@ const LikeBingo = () => {
 
                 </div>
 
-                {/* Bottom Menu */}
-                <div style={styles.bottomMenu}>
-                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Game')}>🎮 Game</div>
-                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Scores')}>🏆 Scores</div>
-                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('History')}>🕓 History</div>
-                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Wallet')}>💰 Wallet</div>
-                    <div style={styles.bottomMenuItem} onClick={() => setCurrentTab('Profile')}>👤 Profile</div>
+                {/* Bottom Navigation */}
+                <div style={styles.tabBar}>
+                    {[
+                        { label: 'Game', icon: '🎮' },
+                        { label: 'Scores', icon: '🏆' },
+                        { label: 'History', icon: '🕘' },
+                        { label: 'Wallet', icon: '💼' },
+                        { label: 'Profile', icon: '👤' }
+                    ].map((tab) => (
+                        <div
+                            key={tab.label}
+                            onClick={() => setCurrentTab(tab.label)}
+                            style={{
+                                ...styles.tabItem,
+                                color: currentTab === tab.label ? '#2f88ff' : 'black',
+                                fontWeight: currentTab === tab.label ? '700' : 'normal'
+                            }}
+                        >
+                            <div style={styles.tabIcon}>{tab.icon}</div>
+                            <div style={styles.tabLabel}>{tab.label}</div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
     );
 };
 
-// Enhanced styles for bingo game - matching second.jsx theme
+// Enhanced styles for bingo game - PURPLE THEME
 const styles = {
     container: {
         minHeight: "100vh",
+        maxHeight: "100vh",
         height: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#d2a4e5",
+        background: "#e9d9f0",
         padding: "0",
-        fontFamily: "'Poppins', sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         overflow: "hidden"
     },
     appShell: {
         width: "100%",
-        maxWidth: "100vw",
+        maxWidth: "390px",
         height: "100vh",
-        background: "#c39cd9",
+        maxHeight: "100vh",
+        background: "#b992c9",
         borderRadius: "0",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
         overflow: "hidden",
-        padding: "8px",
+        padding: "12px 14px 0",
+        position: "relative",
         display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        boxSizing: "border-box"
+        flexDirection: "column"
     },
     header: {
         display: "flex",
@@ -1635,46 +1705,46 @@ const styles = {
         minWidth: "150px"
     },
     statusGrid: {
-        width: "100%",
-        display: "grid",
-        gridTemplateColumns: "repeat(4, 1fr)",
-        textAlign: "center",
+        display: "flex",
         gap: "4px",
-        fontSize: "10px",
-        fontWeight: "500",
-        color: "#1c1c2e",
-        padding: "4px 0",
-        margin: "0 0 4px 0"
+        justifyContent: "space-between",
+        margin: "6px 0 10px 0" /* Added bottom margin */
     },
     statusCard: {
-        background: "transparent",
-        padding: "0",
-        borderRadius: "0",
+        background: "#fff",
+        padding: "4px 6px",
+        borderRadius: "20px",
         textAlign: "center",
-        minWidth: "auto",
+        minWidth: "60px",
         flex: 1
     },
     statusLabel: {
-        fontSize: "11px",
-        color: "#1c1c2e",
-        fontWeight: "500"
+        fontSize: "9px",
+        color: "#7a4f9a"
     },
     statusValue: {
         fontSize: "11px",
         fontWeight: "700",
-        color: "#1c1c2e"
+        color: "#7a4f9a"
     },
     warning: {
-        width: "100%",
-        height: "1px",
-        backgroundColor: "rgba(28,28,46,0.2)",
-        margin: "6px 0"
+        margin: "6px 0 10px 0", /* Added bottom margin */
+        background: "#ffdede",
+        color: "#c94b4b",
+        padding: "8px",
+        borderRadius: "8px",
+        textAlign: "center",
+        fontSize: "11px"
     },
     notification: {
-        width: "100%",
-        height: "1px",
-        backgroundColor: "rgba(28,28,46,0.2)",
-        margin: "6px 0"
+        margin: "6px 0 10px 0", /* Added bottom margin */
+        background: "#dcfce7",
+        color: "#16a34a",
+        padding: "8px",
+        borderRadius: "8px",
+        textAlign: "center",
+        fontSize: "11px",
+        fontWeight: "500"
     },
     sectionTitle: {
         textAlign: "center",
@@ -1821,28 +1891,36 @@ const styles = {
         fontSize: "13px",
         cursor: "pointer"
     },
-    bottomMenu: {
+    tabBar: {
         position: "fixed",
-        bottom: "0",
         left: "0",
         right: "0",
+        bottom: "0",
+        maxWidth: "390px",
+        margin: "0 auto",
         display: "flex",
-        justifyContent: "space-around",
+        justifyContent: "space-between",
         background: "white",
-        width: "100%",
-        padding: "8px 0",
         borderRadius: "0",
-        zIndex: "1000",
-        borderTop: "1px solid #e5e7eb"
+        padding: "6px 10px", /* Reduced padding */
+        zIndex: 1000,
+        borderTop: "1px solid #e5e7eb",
+        height: "40px" /* Explicitly set height */
     },
-    bottomMenuItem: {
-        fontSize: "11px",
-        color: "#333",
+    tabItem: {
         textAlign: "center",
-        flex: "1",
-        padding: "6px 0",
+        fontSize: "12px",
+        color: "black",
+        width: "20%",
         cursor: "pointer",
         transition: "all 0.2s ease"
+    },
+    tabIcon: {
+        fontSize: "16px" /* Reduced icon size */
+    },
+    tabLabel: {
+        marginTop: "2px", /* Reduced margin */
+        fontSize: "10px" /* Reduced label font size */
     },
     tabContent: {
         backgroundColor: "white",
@@ -1866,141 +1944,135 @@ const styles = {
     profileInfo: {
         lineHeight: 2
     },
-    // New Bingo Hall Styles matching second.jsx
+    // New Bingo Hall Styles
     bingoHallContainer: {
-        background: "transparent",
-        borderRadius: "0",
+        background: "rgba(0, 0, 0, 0.8)",
+        borderRadius: "15px",
         overflow: "hidden",
-        boxShadow: "none",
-        marginBottom: "15px"
+        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
+        marginBottom: "15px" /* Added bottom margin */
     },
-    separator: {
-        width: "100%",
-        height: "1px",
-        backgroundColor: "rgba(28,28,46,0.2)",
-        margin: "6px 0"
+    statusBar: {
+        background: "#0d1526",
+        padding: "6px 10px",
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: "6px",
+        fontSize: "11px",
+        borderBottom: "1px solid #2a3a5a",
+        minHeight: "32px"
+    },
+    statusItem: {
+        display: "flex",
+        alignItems: "center",
+        gap: "5px",
+        whiteSpace: "nowrap"
+    },
+    bingoTitle: {
+        textAlign: "center",
+        padding: "4px 8px",
+        fontSize: "18px",
+        fontWeight: "bold",
+        letterSpacing: "1px",
+        background: "linear-gradient(to right, #ff8a00, #ff0080, #00b3ff)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        textShadow: "0 0 10px rgba(255, 255, 255, 0.2)",
+        margin: "2px 0"
     },
     mainContent: {
         display: "flex",
-        justifyContent: "space-between",
-        width: "100%",
-        gap: "4px",
-        marginTop: "4px",
-        padding: "0 2px"
+        padding: "4px",
+        gap: "4px"
     },
     fullBingoCard: {
-        flex: "1",
+        flex: "1 1 50%",
+        background: "#0d1526",
+        padding: "6px",
+        borderRadius: "6px",
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)"
+    },
+    bingoCardHeader: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
         gap: "3px",
-        background: "rgba(255,255,255,0.2)",
-        padding: "6px",
-        borderRadius: "8px"
-    },
-    bingoCardHeader: {
-        gridColumn: "span 5",
-        display: "flex",
-        justifyContent: "space-around"
-    },
-    headerCell: {
-        fontWeight: "700",
-        color: "white",
-        padding: "3px 8px",
-        borderRadius: "50%"
+        marginBottom: "5px"
     },
     fullBingoGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "2px"
+        gap: "3px"
     },
     numberCell: {
-        background: "rgba(255,255,255,0.5)",
-        textAlign: "center",
-        padding: "2px 0",
-        borderRadius: "3px",
-        fontSize: "10px",
-        fontWeight: "500",
-        color: "#333",
-        height: "20px",
+        background: "#1a2a4a",
+        borderRadius: "4px",
+        height: "25px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        fontSize: "12px",
+        fontWeight: "500",
         transition: "all 0.3s ease"
     },
     rightPanel: {
-        flex: "1",
-        background: "rgba(255,255,255,0.2)",
-        padding: "6px",
-        borderRadius: "8px",
-        textAlign: "center",
+        flex: "1 1 50%",
         display: "flex",
         flexDirection: "column",
-        gap: "4px"
+        gap: "6px"
     },
     controlPanel: {
-        background: "#b080d0",
-        color: "white",
-        borderRadius: "5px",
-        padding: "4px",
-        fontSize: "12px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "2px"
+        background: "#0d1526",
+        borderRadius: "6px",
+        padding: "6px",
+        textAlign: "center",
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)",
+        marginBottom: "4px"
     },
     controlTitle: {
-        fontSize: "13px",
+        fontSize: "14px",
         fontWeight: "bold",
-        marginBottom: "0",
-        color: "white"
+        marginBottom: "8px",
+        color: "#a0a0a0"
     },
     controlValue: {
-        width: "40px",
-        height: "28px",
-        background: "white",
-        color: "#1c1c2e",
+        fontSize: "18px",
+        fontWeight: "bold",
+        height: "35px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: "6px",
-        fontWeight: "bold"
+        background: "#1a2a4a",
+        borderRadius: "4px",
+        color: "#fff"
     },
     currentCallPanel: {
-        background: "#9a6cc3",
-        borderRadius: "8px",
-        padding: "4px",
-        color: "white",
-        flex: "1",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "2px"
+        background: "#0d1526",
+        borderRadius: "6px",
+        padding: "6px",
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)"
     },
     currentCallTitle: {
         textAlign: "center",
         fontSize: "16px",
         fontWeight: "bold",
-        marginBottom: "6px",
-        color: "white"
+        marginBottom: "8px",
+        color: "#ffcc00"
     },
     playerCardGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "2px",
-        width: "100%"
+        gap: "4px" /* Increased gap */
     },
     playerCardCell: {
-        background: "rgba(255,255,255,0.8)",
-        borderRadius: "4px",
-        padding: "4px 0",
-        fontWeight: "600",
-        fontSize: "11px",
-        color: "#333",
-        height: "16px",
+        background: "#1a2a4a",
+        borderRadius: "8px", /* Increased roundness */
+        height: "18px", /* Reduced height */
         display: "flex",
         alignItems: "center",
-        justifyContent: "center"
+        justifyContent: "center",
+        fontSize: "9px", /* Reduced font size */
+        fontWeight: "500",
+        transition: "all 0.3s ease"
     },
     calledNumberCell: {
         background: "#1a2a4a",
@@ -2013,110 +2085,137 @@ const styles = {
         fontWeight: "500"
     },
     boardNumber: {
-        marginTop: "6px",
+        textAlign: "center",
+        margin: "4px 0",
         fontSize: "12px",
-        color: "#333"
+        color: "#ffcc00"
     },
     bingoSection: {
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        marginTop: "8px",
-        gap: "6px"
+        background: "linear-gradient(to right, #ff8a00, #ff0080)",
+        padding: "8px",
+        textAlign: "center",
+        margin: "4px",
+        borderRadius: "6px",
+        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.3)"
     },
     bingoControls: {
-        width: "85%",
-        background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
-        border: "none",
-        color: "white",
-        padding: "10px",
-        borderRadius: "18px",
-        fontWeight: "bold",
-        fontSize: "14px",
-        cursor: "pointer"
-    },
-    controlButtonsRow: {
-        width: "85%",
-        display: "flex",
-        justifyContent: "space-between",
-        gap: "8px"
-    },
-    refreshBingoBtn: {
-        flex: "1",
-        border: "none",
-        color: "white",
-        padding: "10px",
-        borderRadius: "20px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        background: "#4aa8e8"
-    },
-    leaveBingoBtn: {
-        flex: "1",
-        border: "none",
-        color: "white",
-        padding: "10px",
-        borderRadius: "20px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        background: "#e74c3c"
-    },
-    claimBingoBtn: {
-        width: "80%",
-        background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
-        border: "none",
-        color: "white",
-        padding: "12px",
-        borderRadius: "20px",
-        fontWeight: "bold",
-        fontSize: "16px",
-        cursor: "pointer"
-    },
-    gameEndSection: {
-        width: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        marginTop: "8px",
         gap: "6px"
     },
-    gameEndTitle: {
-        fontSize: "16px",
+    controlButtonsRow: {
+        display: "flex",
+        justifyContent: "center",
+        gap: "6px",
+        flexWrap: "wrap"
+    },
+    refreshBingoBtn: {
+        padding: "6px 12px",
+        border: "none",
+        borderRadius: "10px",
+        fontSize: "12px",
         fontWeight: "bold",
-        color: "#333",
-        marginBottom: "10px"
+        cursor: "pointer",
+        background: "#1a2a4a",
+        color: "#fff",
+        transition: "all 0.3s",
+        display: "flex",
+        alignItems: "center",
+        gap: "2px",
+        minWidth: "80px",
+        justifyContent: "center"
+    },
+    leaveBingoBtn: {
+        padding: "6px 12px",
+        border: "none",
+        borderRadius: "10px",
+        fontSize: "12px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        background: "#ff3333",
+        color: "#fff",
+        transition: "all 0.3s",
+        display: "flex",
+        alignItems: "center",
+        gap: "2px",
+        minWidth: "80px",
+        justifyContent: "center"
+    },
+    claimBingoBtn: {
+        padding: "8px 16px",
+        border: "none",
+        borderRadius: "12px",
+        fontSize: "14px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        background: "linear-gradient(to right, #00ff00, #ffff00)",
+        color: "#000",
+        transition: "all 0.3s",
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+        boxShadow: "0 2px 10px rgba(0, 255, 0, 0.4)",
+        animation: "pulse 1s infinite",
+        minWidth: "120px",
+        justifyContent: "center"
+    },
+    gameEndSection: {
+        background: "linear-gradient(to right, #ff6b6b, #4ecdc4)",
+        padding: "12px",
+        textAlign: "center",
+        margin: "6px",
+        borderRadius: "10px",
+        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)"
+    },
+    gameEndTitle: {
+        fontSize: "24px",
+        fontWeight: "bold",
+        color: "#fff",
+        marginBottom: "10px",
+        textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)"
     },
     gameEndMessage: {
-        fontSize: "14px",
-        color: "#333",
-        marginBottom: "15px"
+        fontSize: "16px",
+        color: "#fff",
+        marginBottom: "15px",
+        textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)"
     },
     gameEndButtons: {
-        width: "85%",
         display: "flex",
-        justifyContent: "space-between",
-        gap: "8px"
+        justifyContent: "center",
+        gap: "15px",
+        flexWrap: "wrap"
     },
     newGameBtn: {
-        flex: "1",
+        padding: "8px 16px",
         border: "none",
-        color: "white",
-        padding: "10px",
-        borderRadius: "20px",
+        borderRadius: "12px",
+        fontSize: "14px",
         fontWeight: "bold",
         cursor: "pointer",
-        background: "#4CAF50"
+        background: "linear-gradient(to right, #4CAF50, #45a049)",
+        color: "#fff",
+        transition: "all 0.3s",
+        display: "flex",
+        alignItems: "center",
+        gap: "3px",
+        boxShadow: "0 2px 10px rgba(76, 175, 80, 0.4)"
     },
     leaveGameBtn: {
-        flex: "1",
+        padding: "8px 16px",
         border: "none",
-        color: "white",
-        padding: "10px",
-        borderRadius: "20px",
+        borderRadius: "12px",
+        fontSize: "14px",
         fontWeight: "bold",
         cursor: "pointer",
-        background: "#e74c3c"
+        background: "linear-gradient(to right, #ff6b6b, #ff5252)",
+        color: "#fff",
+        transition: "all 0.3s",
+        display: "flex",
+        alignItems: "center",
+        gap: "3px",
+        boxShadow: "0 2px 10px rgba(255, 107, 107, 0.4)"
     }
 };
 
