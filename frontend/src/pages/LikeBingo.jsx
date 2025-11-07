@@ -1444,25 +1444,27 @@ const LikeBingo = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Top Stats */}
-                    <div style={styles.statusGrid}>
-                        <div style={styles.statusCard}>
-                            <div style={styles.statusLabel}>Wallet</div>
-                            <div style={styles.statusValue}>{userBalance}</div>
+                    {/* Top Stats - Hide in playing state */}
+                    {!(currentTab === 'Game' && gameState === 'playing') && (
+                        <div style={styles.statusGrid}>
+                            <div style={styles.statusCard}>
+                                <div style={styles.statusLabel}>Wallet</div>
+                                <div style={styles.statusValue}>{userBalance}</div>
+                            </div>
+                            <div style={styles.statusCard}>
+                                <div style={styles.statusLabel}>Bonus</div>
+                                <div style={styles.statusValue}>{userBonus}</div>
+                            </div>
+                            <div style={styles.statusCard}>
+                                <div style={styles.statusLabel}>Active Game</div>
+                                <div style={styles.statusValue}>{gameNumber}</div>
+                            </div>
+                            <div style={styles.statusCard}>
+                                <div style={styles.statusLabel}>Stake</div>
+                                <div style={styles.statusValue}>{stake}</div>
+                            </div>
                         </div>
-                        <div style={styles.statusCard}>
-                            <div style={styles.statusLabel}>Bonus</div>
-                            <div style={styles.statusValue}>{userBonus}</div>
-                        </div>
-                        <div style={styles.statusCard}>
-                            <div style={styles.statusLabel}>Active Game</div>
-                            <div style={styles.statusValue}>{gameNumber}</div>
-                        </div>
-                        <div style={styles.statusCard}>
-                            <div style={styles.statusLabel}>Stake</div>
-                            <div style={styles.statusValue}>{stake}</div>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Warning */}
                     {showWarning && (
@@ -2004,13 +2006,17 @@ const styles = {
         borderRadius: "10px"
     },
     leftBoardCell: {
-        background: "rgba(255,255,255,0.5)",
-        textAlign: "center",
-        padding: "4px 0",
-        borderRadius: "4px",
-        fontSize: "12px",
-        fontWeight: "500",
-        color: "#333"
+    background: "rgba(255,255,255,0.5)",
+    textAlign: "center",
+    padding: "2px 0",
+    borderRadius: "4px",
+    fontSize: "11px",
+    fontWeight: "500",
+    color: "#333",
+        height: "16px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
     },
     bingoHeaderGrid: {
         gridColumn: "span 5",
