@@ -1496,17 +1496,17 @@ const LikeBingo = () => {
                                             {/* Action Buttons (66% width) */}
                                             <div style={styles.actionButtons}>
                                                 <button
-                                                    style={{ ...styles.button, backgroundColor: "#2f88ff" }}
-                                                    onClick={refreshCard}
+                                                style={{ ...styles.button, backgroundColor: "#2f88ff" }}
+                                                onClick={refreshCard}
                                                 >
-                                                    Refresh
+                                                Refresh
                                                 </button>
                                                 <button
-                                                    style={{ ...styles.button, backgroundColor: "#ff6600" }}
-                                                    onClick={startGame}
-                                                    disabled={isLoading}
+                                                style={{ ...styles.button, backgroundColor: "#FF4500" }}
+                                                onClick={startGame}
+                                                disabled={isLoading}
                                                 >
-                                                    {isLoading ? 'Starting...' : 'Start Game'}
+                                                {isLoading ? 'Starting...' : 'Start Game'}
                                                 </button>
                                             </div>
                                         </div>
@@ -1885,29 +1885,26 @@ const styles = {
         fontSize: "9px"
     },
     actionButtons: {
-        display: "flex",
-        justifyContent: "flex-end",
-        gap: "8px", /* Increased gap */
-        width: "66%"
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "10px",
+    width: "66%"
     },
     buttonRow: {
-        marginTop: "14px",
-        display: "flex",
-        gap: "12px",
-        alignItems: "flex-start"
+    marginTop: "14px",
+    display: "flex",
+    gap: "12px",
+    alignItems: "flex-start"
     },
     button: {
     border: "none",
-    padding: "12px 16px", /* More padding for better touch */
-    borderRadius: "25px", /* More rounded for modern look */
+    padding: "10px 12px",
+    borderRadius: "24px",
     fontWeight: "700",
-    fontSize: "15px", /* Slightly larger font */
+    fontSize: "15px",
     cursor: "pointer",
     color: "#fff",
-    transition: "all 0.3s ease",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.15)", /* Add shadow for depth */
-        textTransform: "uppercase", /* Make text more prominent */
-        letterSpacing: "0.5px" /* Better spacing */
+    transition: "all 0.2s ease"
     },
     refreshBtn: {
         background: "#2f88ff",
