@@ -2010,12 +2010,12 @@ const styles = {
     leftBoardCell: {
     background: "rgba(255,255,255,0.5)",
     textAlign: "center",
-    padding: "2px 0",
+    padding: "3px 0",
     borderRadius: "4px",
     fontSize: "11px",
     fontWeight: "500",
     color: "#333",
-    height: "14px",
+    height: "18px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center"
