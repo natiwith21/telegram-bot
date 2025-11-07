@@ -1978,45 +1978,45 @@ const styles = {
     gridTemplateColumns: "repeat(4, 1fr)",
     textAlign: "center",
     gap: "6px",
-        fontSize: "11px",
-        fontWeight: "500",
-        color: "#1c1c2e",
-        padding: "6px 0"
+    fontSize: "11px",
+    fontWeight: "500",
+    color: "#1c1c2e",
+    padding: "3px 0"
     },
     separator: {
-        width: "100%",
-        height: "1px",
-        backgroundColor: "rgba(28,28,46,0.2)",
-        margin: "6px 0"
+    width: "100%",
+    height: "1px",
+    backgroundColor: "rgba(28,28,46,0.2)",
+    margin: "3px 0"
     },
     mainSection: {
-        display: "flex",
-        justifyContent: "space-between",
-        width: "100%",
-        gap: "6px",
-        marginTop: "6px"
+    display: "flex",
+    justifyContent: "space-between",
+    width: "100%",
+    gap: "6px",
+    marginTop: "3px"
     },
     leftBoard: {
-        flex: 1,
-        display: "grid",
-        gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "5px",
-        background: "rgba(255,255,255,0.2)",
-        padding: "8px",
-        borderRadius: "10px"
+    flex: 1,
+    display: "grid",
+    gridTemplateColumns: "repeat(5, 1fr)",
+    gap: "3px",
+    background: "rgba(255,255,255,0.2)",
+    padding: "4px",
+    borderRadius: "10px"
     },
     leftBoardCell: {
     background: "rgba(255,255,255,0.5)",
     textAlign: "center",
-    padding: "2px 0",
+    padding: "1px 0",
     borderRadius: "4px",
-    fontSize: "11px",
+    fontSize: "10px",
     fontWeight: "500",
     color: "#333",
-        height: "16px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
+    height: "12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
     },
     bingoHeaderGrid: {
         gridColumn: "span 5",
@@ -2030,61 +2030,63 @@ const styles = {
         borderRadius: "50%"
     },
     rightBoard: {
-        flex: 1,
-        background: "rgba(255,255,255,0.2)",
-        padding: "8px",
-        borderRadius: "10px",
-        textAlign: "center"
+    flex: 1,
+    background: "rgba(255,255,255,0.2)",
+    padding: "4px",
+    borderRadius: "10px",
+    textAlign: "center"
     },
     countSection: {
-        background: "#b080d0",
-        color: "white",
-        borderRadius: "6px",
-        padding: "6px",
-        marginBottom: "6px",
-        fontSize: "13px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "4px"
+    background: "#b080d0",
+    color: "white",
+    borderRadius: "6px",
+    padding: "4px",
+    marginBottom: "4px",
+    fontSize: "12px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "2px"
     },
     countBox: {
-        width: "40px",
-        height: "28px",
-        background: "white",
-        color: "#1c1c2e",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "6px",
-        fontWeight: "bold"
+    width: "36px",
+    height: "24px",
+    background: "white",
+    color: "#1c1c2e",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "6px",
+    fontWeight: "bold",
+        fontSize: "11px"
     },
     currentCallSection: {
-        background: "#9a6cc3",
-        borderRadius: "10px",
-        padding: "6px",
-        color: "white",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
+    background: "#9a6cc3",
+    borderRadius: "10px",
+    padding: "4px",
+    color: "white",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
         justifyContent: "center"
     },
     callCircle: {
-        width: "40px",
-        height: "40px",
-        background: "orange",
-        borderRadius: "50%",
-        color: "white",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: "bold",
-        marginTop: "6px"
+    width: "36px",
+    height: "36px",
+    background: "orange",
+    borderRadius: "50%",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+        marginTop: "4px",
+        fontSize: "12px"
     },
     smallBoard: {
-        background: "rgba(255,255,255,0.3)",
-        marginTop: "8px",
-        padding: "10px",
+    background: "rgba(255,255,255,0.3)",
+    marginTop: "4px",
+        padding: "6px",
         borderRadius: "10px"
     },
     smallHeader: {
@@ -2099,17 +2101,21 @@ const styles = {
         borderRadius: "50%"
     },
     boardGrid: {
-        display: "grid",
-        gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "4px"
+    display: "grid",
+    gridTemplateColumns: "repeat(5, 1fr)",
+    gap: "2px"
     },
     boardGridCell: {
-        background: "rgba(255,255,255,0.8)",
-        borderRadius: "6px",
-        padding: "6px 0",
-        fontWeight: "600",
-        fontSize: "13px",
-        color: "#333"
+    background: "rgba(255,255,255,0.8)",
+    borderRadius: "4px",
+    padding: "4px 0",
+    fontWeight: "600",
+    fontSize: "11px",
+    color: "#333",
+        height: "16px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
     },
     centerCell: {
         background: "#34793e",
@@ -2121,29 +2127,29 @@ const styles = {
         color: "#333"
     },
     bottomButtons: {
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        marginTop: "15px",
-        gap: "10px"
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    marginTop: "8px",
+    gap: "6px"
     },
     bingoBtn: {
-        width: "80%",
-        background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
-        border: "none",
-        color: "white",
-        padding: "12px",
-        borderRadius: "20px",
-        fontWeight: "bold",
-        fontSize: "16px",
-        cursor: "pointer"
+    width: "80%",
+    background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
+    border: "none",
+    color: "white",
+    padding: "8px",
+    borderRadius: "20px",
+    fontWeight: "bold",
+    fontSize: "14px",
+    cursor: "pointer"
     },
     bottomRow: {
-        width: "80%",
-        display: "flex",
-        justifyContent: "space-between",
-        gap: "10px"
+    width: "80%",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "10px"
     },
     refreshBtnNew: {
         flex: 1,
