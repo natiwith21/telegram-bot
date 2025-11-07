@@ -1897,14 +1897,17 @@ const styles = {
         alignItems: "flex-start"
     },
     button: {
-        border: "none",
-        padding: "10px 14px", /* Increased padding */
-        borderRadius: "20px",
-        fontWeight: "700",
-        fontSize: "14px", /* Increased font size */
-        cursor: "pointer",
-        color: "#fff",
-        transition: "all 0.2s ease"
+    border: "none",
+    padding: "12px 16px", /* More padding for better touch */
+    borderRadius: "25px", /* More rounded for modern look */
+    fontWeight: "700",
+    fontSize: "15px", /* Slightly larger font */
+    cursor: "pointer",
+    color: "#fff",
+    transition: "all 0.3s ease",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)", /* Add shadow for depth */
+        textTransform: "uppercase", /* Make text more prominent */
+        letterSpacing: "0.5px" /* Better spacing */
     },
     refreshBtn: {
         background: "#2f88ff",
