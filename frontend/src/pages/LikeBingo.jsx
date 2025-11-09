@@ -1788,7 +1788,7 @@ const styles = {
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
         gap: "2px", /* Further reduced gap */
-        padding: "2px", /* Further reduced padding */
+        padding: "2px 12px", /* Increased left/right padding to prevent cutoff */
         maxWidth: "100%", /* Use full available width */
         margin: "0 auto 15px auto"
     },
