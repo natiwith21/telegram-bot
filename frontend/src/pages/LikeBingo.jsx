@@ -1788,7 +1788,7 @@ const styles = {
         display: "grid",
         gridTemplateColumns: "repeat(10, 1fr)",
         gap: "2px", /* Further reduced gap */
-        padding: "2px 2px 2px 2px", /* Add more left padding to shift right cards into view */
+        padding: "2px 2px 2px 0px", /* Add more left padding to shift right cards into view */
         maxWidth: "100%", /* Use full available width */
         margin: "0 auto 15px auto"
     },
