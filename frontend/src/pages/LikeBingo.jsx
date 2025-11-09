@@ -1784,13 +1784,13 @@ const styles = {
         color: "#4a5568"
     },
     staticGrid: {
-    width: "100%",
-    display: "grid",
-    gridTemplateColumns: "repeat(8, 1fr)",
-    gap: "3px", /* Slightly increased gap for better spacing */
-    padding: "2px 8px", /* Adjusted padding for 8-column layout */
-    maxWidth: "100%", /* Use full available width */
-    margin: "0 auto 15px auto"
+        width: "100%",
+        display: "grid",
+        gridTemplateColumns: "repeat(10, 1fr)",
+        gap: "2px", /* Further reduced gap */
+        padding: "2px 2px 2px 8px", /* Add more left padding to shift right cards into view */
+        maxWidth: "100%", /* Use full available width */
+        margin: "0 auto 15px auto"
     },
     staticCell: {
         height: "32px", /* Increased height for better number visibility */
