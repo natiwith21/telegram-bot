@@ -1460,10 +1460,10 @@ const LikeBingo = () => {
                     </div>
                 )}
 
-                {/* Content Area - Fixed height, no scrolling */}
+                {/* Content Area - Fixed height when playing, scrollable when finished */}
                 <div style={{
                     flex: 1,
-                    overflowY: 'hidden',
+                    overflowY: gameState === 'finished' ? 'auto' : 'hidden',
                     overflowX: 'hidden',
                     paddingBottom: '40px', /* Reduced padding to accommodate smaller tab bar */
                     marginBottom: '0',
@@ -1581,7 +1581,12 @@ const LikeBingo = () => {
 
                             {/* Live Bingo Hall (when game is playing) */}
                             {(gameState === 'playing' || gameState === 'finished') && (
-                                <div style={styles.bingoHallContainer}>
+                                <div style={{
+                                    ...styles.bingoHallContainer,
+                                    maxHeight: gameState === 'finished' ? '50vh' : 'auto',
+                                    overflowY: gameState === 'finished' ? 'auto' : 'visible',
+                                    transition: 'max-height 0.3s ease'
+                                }}>
                                     {/* Top Bar */}
                                     <div style={styles.topBar}>
                                         <div>Game <strong>TV{gameNumber}321</strong></div>
@@ -1678,7 +1683,12 @@ const LikeBingo = () => {
 
                                     {/* Game End Section */}
                                     {gameState === 'finished' && (
-                                        <div style={styles.gameEndSection}>
+                                        <div style={{
+                                            ...styles.gameEndSection,
+                                            position: 'sticky',
+                                            bottom: '50px',
+                                            zIndex: 50
+                                        }}>
                                             <div style={styles.gameEndTitle}>
                                                 {bingoWinner === telegramId ? '🎉 You Won!' : '😔 Game Over'}
                                             </div>
@@ -2466,36 +2476,36 @@ const styles = {
     },
     gameEndSection: {
         background: "linear-gradient(to right, #ff6b6b, #4ecdc4)",
-        padding: "12px",
+        padding: "8px 6px",
         textAlign: "center",
-        margin: "6px",
+        margin: "4px 6px",
         borderRadius: "10px",
         boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)"
     },
     gameEndTitle: {
-        fontSize: "24px",
+        fontSize: "18px",
         fontWeight: "bold",
         color: "#fff",
-        marginBottom: "10px",
+        marginBottom: "6px",
         textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)"
     },
     gameEndMessage: {
-        fontSize: "16px",
+        fontSize: "12px",
         color: "#fff",
-        marginBottom: "15px",
+        marginBottom: "8px",
         textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)"
     },
     gameEndButtons: {
         display: "flex",
         justifyContent: "center",
-        gap: "15px",
+        gap: "8px",
         flexWrap: "wrap"
     },
     newGameBtn: {
-        padding: "8px 16px",
+        padding: "6px 12px",
         border: "none",
-        borderRadius: "12px",
-        fontSize: "14px",
+        borderRadius: "8px",
+        fontSize: "11px",
         fontWeight: "bold",
         cursor: "pointer",
         background: "linear-gradient(to right, #4CAF50, #45a049)",
@@ -2504,13 +2514,13 @@ const styles = {
         display: "flex",
         alignItems: "center",
         gap: "3px",
-        boxShadow: "0 2px 10px rgba(76, 175, 80, 0.4)"
+        boxShadow: "0 2px 8px rgba(76, 175, 80, 0.4)"
     },
     leaveGameBtn: {
-        padding: "8px 16px",
+        padding: "6px 12px",
         border: "none",
-        borderRadius: "12px",
-        fontSize: "14px",
+        borderRadius: "8px",
+        fontSize: "11px",
         fontWeight: "bold",
         cursor: "pointer",
         background: "linear-gradient(to right, #ff6b6b, #ff5252)",
@@ -2519,7 +2529,7 @@ const styles = {
         display: "flex",
         alignItems: "center",
         gap: "3px",
-        boxShadow: "0 2px 10px rgba(255, 107, 107, 0.4)"
+        boxShadow: "0 2px 8px rgba(255, 107, 107, 0.4)"
     }
 };
 
