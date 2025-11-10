@@ -1905,13 +1905,18 @@ const styles = {
     },
     button: {
     border: "none",
-    padding: "4px 12px",
+    padding: "2px 12px",
     borderRadius: "24px",
     fontWeight: "700",
-    fontSize: "12px",
+    fontSize: "11px",
     cursor: "pointer",
     color: "#fff",
-    transition: "all 0.2s ease"
+    transition: "all 0.2s ease",
+    height: "22px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    lineHeight: "1"
     },
     refreshBtn: {
         background: "#2f88ff",
