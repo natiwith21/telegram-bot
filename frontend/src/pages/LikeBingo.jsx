@@ -1901,14 +1901,14 @@ const styles = {
     marginTop: "14px",
     display: "flex",
     gap: "12px",
-    alignItems: "flex-end"
+    alignItems: "flex-start"
     },
     button: {
     border: "none",
-    padding: "10px 12px",
+    padding: "4px 12px",
     borderRadius: "24px",
     fontWeight: "700",
-    fontSize: "15px",
+    fontSize: "12px",
     cursor: "pointer",
     color: "#fff",
     transition: "all 0.2s ease"
