@@ -80,19 +80,41 @@ const LikeBingo = () => {
         }
     }, [currentTab]);
 
-    // Cleanup intervals on unmount
+    // Countdown timer for synchronized display (ticks down every second)
     useEffect(() => {
-        return () => {
-            if (drawIntervalRef.current) {
-                clearInterval(drawIntervalRef.current);
-                drawIntervalRef.current = null;
-            }
-            if (countdownIntervalRef.current) {
-                clearInterval(countdownIntervalRef.current);
-                countdownIntervalRef.current = null;
-            }
-        };
-    }, []);
+    if (!multiplayerCountdown || multiplayerCountdown <= 0) {
+    if (countdownIntervalRef.current) {
+    clearInterval(countdownIntervalRef.current);
+    countdownIntervalRef.current = null;
+    }
+    return;
+    }
+
+    countdownIntervalRef.current = setInterval(() => {
+        setMultiplayerCountdown(prev => Math.max(0, (prev || 0) - 1));
+        }, 1000);
+
+         return () => {
+             if (countdownIntervalRef.current) {
+                 clearInterval(countdownIntervalRef.current);
+                 countdownIntervalRef.current = null;
+             }
+         };
+     }, [multiplayerCountdown]);
+
+     // Cleanup intervals on unmount
+     useEffect(() => {
+         return () => {
+             if (drawIntervalRef.current) {
+                 clearInterval(drawIntervalRef.current);
+                 drawIntervalRef.current = null;
+             }
+             if (countdownIntervalRef.current) {
+                 clearInterval(countdownIntervalRef.current);
+                 countdownIntervalRef.current = null;
+             }
+         };
+     }, []);
 
     // Handle WebSocket messages for multiplayer
     useEffect(() => {
@@ -190,6 +212,16 @@ const LikeBingo = () => {
                         setMultiplayerCountdown(lastMessage.nextGameCountdown);
                         setDrawnNumbers(lastMessage.calledNumbers || []);
                         setCurrentCall(lastMessage.currentCall);
+                        
+                        // CRITICAL: Sync all marked numbers from other players
+                        if (lastMessage.allMarkedNumbers) {
+                            const allMarked = new Set();
+                            Object.values(lastMessage.allMarkedNumbers).forEach(numbers => {
+                                numbers.forEach(num => allMarked.add(num));
+                            });
+                            setMarkedCells(allMarked);
+                            console.log(`✅ Synced marked numbers from server: ${allMarked.size} marked cells`);
+                        }
                     }
                     break;
 
@@ -255,14 +287,19 @@ const LikeBingo = () => {
 
                 case 'shared_number_called':
                     // Real-time number calling - all players see the same number
+                    // Server broadcasts with serverTime to ensure perfect sync
                     console.log(`📢 Shared number called: ${lastMessage.number}`);
-                    setCurrentCall(lastMessage.number);
+                    
+                    // Update drawn numbers from server (source of truth)
                     setDrawnNumbers(lastMessage.calledNumbers);
+                    setCurrentCall(lastMessage.number);
 
                     // Play sound if enabled
                     if (soundEnabled) {
                         playDrawSound();
                     }
+                    
+                    console.log(`✅ All players now see number: ${lastMessage.number}, Total called: ${lastMessage.calledNumbers.length}`);
                     break;
 
                 case 'shared_game_ended':
@@ -296,6 +333,18 @@ const LikeBingo = () => {
                 case 'next_shared_game_countdown':
                     // Show countdown for next shared game in existing Count Down UI only
                     setMultiplayerCountdown(lastMessage.countdown);
+                    break;
+
+                case 'player_marked':
+                    // CRITICAL: Sync marked cells from other players in real-time
+                    if (lastMessage.telegramId !== telegramId) {
+                        console.log(`👤 Player ${lastMessage.telegramId} marked cell: ${lastMessage.number}`);
+                        setMarkedCells(prev => {
+                            const updated = new Set(prev);
+                            updated.add(lastMessage.number);
+                            return updated;
+                        });
+                    }
                     break;
 
                 default:
@@ -884,19 +933,31 @@ const LikeBingo = () => {
     };
 
     const handleBingoCardClick = (rowIndex, colIndex, number) => {
-        if (gameState !== 'playing') return;
-        const cellKey = `${rowIndex}-${colIndex}`;
+    if (gameState !== 'playing') return;
+    const cellKey = `${rowIndex}-${colIndex}`;
 
-        setMarkedCells(prev => {
-            const newMarked = new Set(prev);
-            if (newMarked.has(cellKey)) {
-                newMarked.delete(cellKey);
-            } else {
-                newMarked.add(cellKey);
-            }
-            return newMarked;
-        });
-    };
+    setMarkedCells(prev => {
+    const newMarked = new Set(prev);
+    if (newMarked.has(cellKey)) {
+    newMarked.delete(cellKey);
+    } else {
+    newMarked.add(cellKey);
+    }
+    
+        // CRITICAL: Broadcast marked cell to all players so everyone sees same board state
+            if (isConnected && sendMessage) {
+                 sendMessage({
+                     type: 'player_mark',
+                     number: cellKey, // Send cell key for synchronization
+                     roomId: 'like-bingo-room',
+                     telegramId: telegramId
+                 });
+                 console.log(`📤 Broadcasted mark for cell ${cellKey} to all players`);
+             }
+             
+             return newMarked;
+         });
+     };
 
     // Check for winning Bingo pattern (any full row, column, or diagonal)
     const checkBingoCardWin = (marked) => {

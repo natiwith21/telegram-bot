@@ -278,6 +278,16 @@ async function handleBingoNumberCall(callerTelegramId, roomId, number) {
 
 // Handle player mark (for multiplayer awareness)
 async function handlePlayerMark(telegramId, roomId, number) {
+  // Also update the shared game session if it exists
+  const sharedGame = liveGameSessions.get(roomId);
+  if (sharedGame && sharedGame.players.has(telegramId)) {
+    const player = sharedGame.players.get(telegramId);
+    if (!player.markedNumbers) {
+      player.markedNumbers = new Set();
+    }
+    player.markedNumbers.add(number);
+  }
+  
   broadcastToRoom(roomId, {
     type: 'player_marked',
     telegramId: telegramId,
@@ -402,37 +412,47 @@ async function handleStartMultiplayerGame(telegramId, message) {
         });
         
       } else if (sharedGame.state === 'playing') {
-        // Game is already running - join mid-game
-        sharedGame.players.set(telegramId, {
-          selectedNumbers: selectedNumbers || [],
-          markedNumbers: new Set(),
-          hasWon: false,
-          stake: stake
-        });
-        
-        // Calculate next game countdown (estimate time until current game ends)
-        const estimatedGameDuration = 20 * 3000; // 20 numbers * 3 seconds each
-        const gameElapsed = Date.now() - (sharedGame.startTime - 30000); // Subtract waiting time
-        const nextGameTime = Math.max(0, estimatedGameDuration - gameElapsed) + 60000; // Add 1 minute buffer
-        const nextGameCountdown = Math.ceil(nextGameTime / 1000);
-        
-        sendToUser(telegramId, {
-          type: 'joined_shared_mid_game',
-          gameId: sharedGame.id,
-          roomId: sharedGame.roomId,
-          calledNumbers: sharedGame.calledNumbers,
-          currentCall: sharedGame.currentCall,
-          playersCount: sharedGame.players.size,
-          nextGameCountdown: 'wait' // Show "wait" for late joiners
-        });
-        
-        // Notify other players
-        broadcastToLiveGame(sharedGame.roomId, {
-          type: 'player_joined_shared_mid_game',
-          telegramId: telegramId,
-          playersCount: sharedGame.players.size
-        }, [telegramId]);
+      // Game is already running - join mid-game
+      sharedGame.players.set(telegramId, {
+      selectedNumbers: selectedNumbers || [],
+      markedNumbers: new Set(),
+      hasWon: false,
+      stake: stake
+      });
+      
+      // Calculate next game countdown (estimate time until current game ends)
+      const estimatedGameDuration = 20 * 3000; // 20 numbers * 3 seconds each
+      const gameElapsed = Date.now() - (sharedGame.startTime - 30000); // Subtract waiting time
+      const nextGameTime = Math.max(0, estimatedGameDuration - gameElapsed) + 60000; // Add 1 minute buffer
+      const nextGameCountdown = Math.ceil(nextGameTime / 1000);
+      
+      // CRITICAL: Send all marked numbers from all players so late joiner sees same board state
+      const allMarkedNumbers = {};
+      sharedGame.players.forEach((player, playerId) => {
+      if (player.markedNumbers && player.markedNumbers.size > 0) {
+        allMarkedNumbers[playerId] = Array.from(player.markedNumbers);
       }
+      });
+      
+      sendToUser(telegramId, {
+        type: 'joined_shared_mid_game',
+        gameId: sharedGame.id,
+        roomId: sharedGame.roomId,
+      calledNumbers: sharedGame.calledNumbers,
+      currentCall: sharedGame.currentCall,
+      playersCount: sharedGame.players.size,
+        nextGameCountdown: 'wait', // Show "wait" for late joiners
+          allMarkedNumbers: allMarkedNumbers, // CRITICAL: Send all marked numbers from all players
+           serverTime: Date.now() // For client-side synchronization
+         });
+         
+         // Notify other players
+         broadcastToLiveGame(sharedGame.roomId, {
+           type: 'player_joined_shared_mid_game',
+           telegramId: telegramId,
+           playersCount: sharedGame.players.size
+         }, [telegramId]);
+       }
     } else {
       // Create new shared game session
       const gameId = `shared_${gameMode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -470,24 +490,27 @@ async function handleStartMultiplayerGame(telegramId, message) {
       
       // Start countdown timer with proper synchronization
       const countdownTimer = setInterval(() => {
-        const currentTime = Date.now();
-        const timeLeft = Math.max(0, Math.ceil((startTime - currentTime) / 1000));
-        
-        if (timeLeft <= 0) {
-          clearInterval(countdownTimer);
-          // CRITICAL: Add buffer time to ensure all clients are synchronized
-          setTimeout(() => startSharedGamePlay(newRoomId), 1000);
-        } else {
-          // Broadcast synchronized countdown with server timestamp
-          broadcastToLiveGame(newRoomId, {
-            type: 'shared_game_countdown',
-            countdown: timeLeft,
-            serverTime: currentTime,
-            startTime: startTime,
-            playersCount: newSharedGame.players.size
-          });
-        }
-      }, 1000);
+      const currentTime = Date.now();
+      const timeLeft = Math.max(0, Math.ceil((startTime - currentTime) / 1000));
+      
+      if (timeLeft <= 0) {
+      clearInterval(countdownTimer);
+      newSharedGame.countdownTimer = null;
+      // CRITICAL: Add buffer time to ensure all clients are synchronized
+        setTimeout(() => startSharedGamePlay(newRoomId), 1000);
+      } else {
+      // Broadcast synchronized countdown with server timestamp
+      // All clients use serverTime to calculate their own countdown for perfect sync
+      broadcastToLiveGame(newRoomId, {
+      type: 'shared_game_countdown',
+      countdown: timeLeft,
+      serverTime: currentTime,
+        startTime: startTime,
+          playersCount: newSharedGame.players.size,
+            gameId: newSharedGame.id
+           });
+         }
+       }, 1000);
       
       newSharedGame.countdownTimer = countdownTimer;
       
@@ -1217,48 +1240,54 @@ function startLiveNumberCalling(roomId) {
 
 // Handle number calling for shared games (identical results for all players)
 function startSharedNumberCalling(roomId) {
-  const sharedGame = liveGameSessions.get(roomId);
-  if (!sharedGame || sharedGame.state !== 'playing') return;
-  
-  // Generate available numbers (1-75)
-  const availableNumbers = [];
-  for (let i = 1; i <= LIVE_GAME_CONFIG.maxNumbers; i++) {
-    if (!sharedGame.calledNumbers.includes(i)) {
-      availableNumbers.push(i);
-    }
-  }
-  
-  if (availableNumbers.length === 0 || sharedGame.calledNumbers.length >= 20) {
-    endSharedGame(roomId, 'all_numbers_called');
-    return;
-  }
-  
-  // Call random number - this will be the SAME for all players in the shared session
-  const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-  const calledNumber = availableNumbers[randomIndex];
-  
-  sharedGame.calledNumbers.push(calledNumber);
-  sharedGame.currentCall = calledNumber;
-  
-  // Broadcast to all players - they all see the same number at the same time
-  broadcastToLiveGame(roomId, {
-    type: 'shared_number_called',
-    number: calledNumber,
-    calledNumbers: sharedGame.calledNumbers,
+const sharedGame = liveGameSessions.get(roomId);
+if (!sharedGame || sharedGame.state !== 'playing') return;
+
+// Generate available numbers (1-75)
+const availableNumbers = [];
+for (let i = 1; i <= LIVE_GAME_CONFIG.maxNumbers; i++) {
+if (!sharedGame.calledNumbers.includes(i)) {
+availableNumbers.push(i);
+}
+}
+
+if (availableNumbers.length === 0 || sharedGame.calledNumbers.length >= 20) {
+endSharedGame(roomId, 'all_numbers_called');
+return;
+}
+
+// Call random number - this will be the SAME for all players in the shared session
+const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+const calledNumber = availableNumbers[randomIndex];
+
+sharedGame.calledNumbers.push(calledNumber);
+sharedGame.currentCall = calledNumber;
+
+// Get exact server time for synchronization
+const serverTime = Date.now();
+
+// Broadcast to all players - they all see the same number at the same time
+// Include server time for client-side synchronization
+broadcastToLiveGame(roomId, {
+type: 'shared_number_called',
+number: calledNumber,
+  calledNumbers: sharedGame.calledNumbers,
     totalCalled: sharedGame.calledNumbers.length,
-    currentCall: calledNumber,
-    isSharedSession: true
-  });
-  
-  console.log(`📢 Shared game ${roomId}: Called number ${calledNumber} (${sharedGame.calledNumbers.length}/20) for ${sharedGame.players.size} players`);
-  
-  // Schedule next number call (limit to 20 numbers)
-  if (sharedGame.calledNumbers.length < 20) {
-    sharedGame.numberCallTimer = setTimeout(() => {
-      if (sharedGame.state === 'playing') {
-        startSharedNumberCalling(roomId);
+  currentCall: calledNumber,
+    serverTime: serverTime,  // CRITICAL: Server timestamp for sync
+  isSharedSession: true
+});
+
+console.log(`📢 Shared game ${roomId}: Called number ${calledNumber} (${sharedGame.calledNumbers.length}/20) for ${sharedGame.players.size} players at ${serverTime}`);
+
+// Schedule next number call (limit to 20 numbers)
+// Use consistent 3-second interval from server
+if (sharedGame.calledNumbers.length < 20) {
+sharedGame.numberCallTimer = setTimeout(() => {
+  if (sharedGame.state === 'playing') {
+      startSharedNumberCalling(roomId);
       }
-    }, LIVE_GAME_CONFIG.numberCallInterval);
+    }, 3000);  // Fixed interval - no variation
   } else {
     // End game after 20 numbers
     endSharedGame(roomId, 'number_limit_reached');
@@ -1290,23 +1319,31 @@ async function handleClaimLiveBingo(telegramId, message) {
       return;
     }
     
-    // Check if player already won
-    if (player.hasWon) {
+    // CRITICAL: Check if game already has a winner (FIRST COME FIRST SERVED)
+    if (liveGame.winners.length > 0) {
+      const firstWinner = liveGame.winners[0];
       sendToUser(telegramId, {
-        type: 'error',
-        message: 'You have already won'
+        type: 'bingo_claimed',
+        winner: firstWinner.telegramId,
+        message: 'Someone else already won',
+        isFirstToWin: false
       });
       return;
     }
     
-    // Mark player as winner
+    // CRITICAL: Claim win ATOMICALLY - mark this player as first winner
+    const claimTime = Date.now();
     player.hasWon = true;
-    liveGame.winners.push({
+    
+    const winnerRecord = {
       telegramId: telegramId,
-      position: liveGame.winners.length + 1,
+      position: 1,  // Always position 1 since they're first
       winPattern: winPattern,
-      claimTime: Date.now()
-    });
+      claimTime: claimTime,
+      isFirstToWin: true
+    };
+    
+    liveGame.winners.push(winnerRecord);
     
     // Get user name
     let winnerName = 'Player';
@@ -1320,19 +1357,22 @@ async function handleClaimLiveBingo(telegramId, message) {
       console.log('Could not fetch user name:', error.message);
     }
     
-    // Broadcast win to all players
+    // Broadcast win to all players with CRITICAL flag
     broadcastToLiveGame(roomId, {
       type: 'live_bingo_claimed',
       winner: telegramId,
       winnerName: winnerName,
-      position: liveGame.winners.length,
-      winPattern: winPattern
+      position: 1,  // Only first winner
+      winPattern: winPattern,
+      claimTime: claimTime,
+      isFirstToWin: true,
+      serverTime: claimTime  // For audit trail
     });
     
-    console.log(`🎉 Live Bingo claimed by ${telegramId} (${winnerName}) - Position: ${liveGame.winners.length}`);
+    console.log(`🎉 FIRST BINGO CLAIMED by ${telegramId} (${winnerName}) at ${claimTime}`);
     
     // End game immediately when first player claims bingo
-    console.log(`🏁 Ending shared game immediately - first BINGO claimed by ${winnerName}`);
+    console.log(`🏁 Ending live game immediately - first BINGO claimed by ${winnerName}`);
     endLiveGame(roomId, 'bingo_claimed');
     
   } catch (error) {
