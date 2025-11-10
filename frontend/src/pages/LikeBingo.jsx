@@ -1901,7 +1901,7 @@ const styles = {
     marginTop: "14px",
     display: "flex",
     gap: "12px",
-    alignItems: "flex-start"
+    alignItems: "flex-end"
     },
     button: {
     border: "none",
