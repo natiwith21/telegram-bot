@@ -1893,9 +1893,10 @@ const styles = {
     },
     actionButtons: {
     display: "flex",
-    justifyContent: "flex-end",
-    gap: "10px",
-    width: "66%"
+    justifyContent: "space-between",
+    gap: "8px",
+    flex: 1,
+    marginLeft: "auto"
     },
     buttonRow: {
     marginTop: "14px",
@@ -1905,7 +1906,7 @@ const styles = {
     },
     button: {
     border: "none",
-    padding: "8px 14px",
+    padding: "8px 16px",
     borderRadius: "24px",
     fontWeight: "700",
     fontSize: "14px",
@@ -1916,7 +1917,9 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    lineHeight: "1"
+    lineHeight: "1",
+    whiteSpace: "nowrap",
+    minWidth: "90px"
     },
     refreshBtn: {
         background: "#2f88ff",
