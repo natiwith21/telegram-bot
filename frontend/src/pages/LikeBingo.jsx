@@ -1866,10 +1866,10 @@ const styles = {
         marginTop: "8px"
     },
     bottomRow: {
-        marginTop: "6px",
-        display: "flex",
-        gap: "8px",
-        alignItems: "flex-start"
+    marginTop: "6px",
+    display: "flex",
+    gap: "20px",
+    alignItems: "flex-start"
     },
     miniCard: {
         background: "rgba(255,255,255,0.12)",
