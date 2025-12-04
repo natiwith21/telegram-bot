@@ -147,11 +147,20 @@ const LikeBingo = () => {
 
                     if (lastMessage.winner === telegramId) {
                         // Handle win - update balance based on game mode
-                        await handleGameWin();
-                        alert(`🎉 Congratulations! You won the Bingo game!`);
+                        // Pass pool data to handleGameWin
+                        await handleGameWin({
+                            totalPoolCollected: lastMessage.totalPool,
+                            playerCount: lastMessage.playersInGame,
+                            winAmount: lastMessage.winAmount
+                        });
+                        alert(`🎉 Congratulations! You won the Bingo game!\n\n💰 Pool: ${lastMessage.totalPool} coins\n🏆 You won: ${lastMessage.winAmount} coins (80%)`);
                     } else {
                         // Handle loss - record the loss in backend
-                        await handleGameLoss();
+                        // Pass pool data even for loss
+                        await handleGameLoss({
+                            totalPoolCollected: lastMessage.totalPool,
+                            playerCount: lastMessage.playersInGame
+                        });
                         alert(`🏆 ${lastMessage.winnerName || 'Another player'} won the Bingo game!`);
                     }
 
@@ -303,7 +312,11 @@ const LikeBingo = () => {
                     break;
 
                 case 'shared_game_ended':
-                    console.log('🏁 Shared game ended');
+                    console.log(`🏁 Play ${lastMessage.gameMode} game ended`);
+                    console.log(`   💰 Prize Pool: ${lastMessage.totalCollected} coins`);
+                    console.log(`   🏆 Winner gets: ${lastMessage.winnerAmount} coins (80%)`);
+                    console.log(`   🏦 House gets: ${lastMessage.houseShare} coins (20%)`);
+                    
                     setGameState('finished');
                     setGameStarted(false);
                     setMultiplayerCountdown(null);
@@ -317,10 +330,17 @@ const LikeBingo = () => {
                     // Process game result only if no one claimed bingo during the game
                     if (!bingoWinner) {
                         const playerWon = lastMessage.winners?.some(winner => winner.telegramId === telegramId);
+                        const poolData = {
+                            totalPoolCollected: lastMessage.totalCollected,
+                            playerCount: lastMessage.totalPlayers,
+                            winAmount: lastMessage.winnerAmount
+                        };
+                        
                         if (playerWon) {
-                            await handleGameWin();
+                            // Winner gets 80% of the pool collected from their game level
+                            await handleGameWin(poolData);
                         } else {
-                            await handleGameLoss();
+                            await handleGameLoss(poolData);
                         }
                     }
 
@@ -356,7 +376,7 @@ const LikeBingo = () => {
     }, [lastMessage]);
 
     // Process game result and update balance accordingly
-    const processGameResult = async (isWin) => {
+    const processGameResult = async (isWin, poolData = {}) => {
         if (gameMode === 'demo' || !telegramId) {
             console.log(`🎮 Demo mode or no telegramId - skipping balance update`);
             return;
@@ -364,6 +384,7 @@ const LikeBingo = () => {
 
         console.log(`🎯 Processing game result: ${isWin ? 'WIN' : 'LOSS'} for stake ${stake}`);
         console.log(`📊 Current frontend balance before processing: ${userBalance}`);
+        console.log(`   Pool Data:`, poolData);
 
         try {
             const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/like-bingo-play`, {
@@ -377,7 +398,11 @@ const LikeBingo = () => {
                     gameMode,
                     gameResult: true, // Flag to indicate this is processing final game result
                     isWin,
-                    reason: isWin ? 'game_win' : 'game_loss'
+                    reason: isWin ? 'game_win' : 'game_loss',
+                    // NEW: Include pool data from WebSocket
+                    totalPoolCollected: poolData.totalPoolCollected,
+                    playerCount: poolData.playerCount,
+                    winAmount: poolData.winAmount
                 })
             });
 
@@ -390,10 +415,12 @@ const LikeBingo = () => {
                     const winnings = data.winAmount || (stake * getWinMultiplier());
                     console.log(`🏆 WIN RESULT: Deducted ${stake}, won ${winnings}, net: +${winnings - stake}`);
                     console.log(`📈 Balance updated from ${userBalance} to ${data.newBalance}`);
+                    console.log(`   Game Record: ${data.gameRecord}`);
                     showBalanceNotification(`🎉 Won ${winnings} coins! Net gain: +${winnings - stake}`, 'win');
                 } else {
                     console.log(`😢 LOSS RESULT: Deducted ${stake} coins`);
                     console.log(`📉 Balance updated from ${userBalance} to ${data.newBalance}`);
+                    console.log(`   Game Record: ${data.gameRecord}`);
                     showBalanceNotification(`😢 Lost ${stake} coins. New balance: ${data.newBalance}`, 'loss');
                 }
 
@@ -418,28 +445,30 @@ const LikeBingo = () => {
     };
 
     // Handle game win - process win result
-    const handleGameWin = async () => {
+    const handleGameWin = async (poolData = {}) => {
         if (gameMode === 'demo') {
             alert('🎉 Demo win! No real coins affected.');
             return;
         }
 
         console.log('🏆 Handling game win...');
-        await processGameResult(true);
+        console.log('   Pool Data:', poolData);
+        await processGameResult(true, poolData);
 
         // Refresh balance to ensure UI is in sync
         setTimeout(() => loadUserData(), 1000);
     };
 
     // Handle game loss - process loss result
-    const handleGameLoss = async () => {
+    const handleGameLoss = async (poolData = {}) => {
         if (gameMode === 'demo') {
             alert('😢 Demo loss! No real coins affected.');
             return;
         }
 
         console.log('😢 Handling game loss...');
-        await processGameResult(false);
+        console.log('   Pool Data:', poolData);
+        await processGameResult(false, poolData);
 
         // Refresh balance to ensure UI is in sync
         setTimeout(() => loadUserData(), 1000);

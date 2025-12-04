@@ -353,23 +353,46 @@ function notifyAdminsNewPayment(paymentData) {
   console.log('New payment notification:', paymentData);
 }
 
+// Calculate prize pool for a game level
+function calculatePrizePool(sharedGame) {
+  // Calculate total stake from all players in this specific game level
+  const totalStake = Array.from(sharedGame.players.values())
+    .reduce((sum, player) => sum + (player.stake || 0), 0);
+  
+  // Prize pool is 100% of what was collected from THIS level
+  const prizePool = totalStake;
+  const winnerPool = Math.floor(prizePool * 0.80);  // 80% to winner
+  const houseShare = prizePool - winnerPool;        // 20% to house
+  
+  return {
+    totalStake,
+    prizePool,
+    winnerPool,
+    houseShare
+  };
+}
+
 // Handle multiplayer game start
 async function handleStartMultiplayerGame(telegramId, message) {
   const { roomId = 'like-bingo-room', selectedNumbers, stake, token, gameMode } = message;
   
   try {
-    console.log(`🎮 ${telegramId} starting/joining shared multiplayer game in room ${roomId}`);
+    console.log(`🎮 ${telegramId} starting/joining shared multiplayer game in room ${roomId} - Mode: ${gameMode}`);
     
-    // Add player to room if not already there
-    if (!gameRooms.has(roomId)) {
-      gameRooms.set(roomId, new Set());
+    // CRITICAL: Use level-specific room to isolate game pools
+    const levelSpecificRoomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}_shared`;
+    
+    // Add player to level-specific room
+    if (!gameRooms.has(levelSpecificRoomId)) {
+      gameRooms.set(levelSpecificRoomId, new Set());
     }
-    gameRooms.get(roomId).add(telegramId);
+    gameRooms.get(levelSpecificRoomId).add(telegramId);
     
-    // Check if there's already an active shared game session
+    // Check if there's already an active shared game session for THIS game level
     let sharedGame = null;
     for (const [sessionRoomId, session] of liveGameSessions.entries()) {
-      if (sessionRoomId.includes(gameMode) && (session.state === 'waiting' || session.state === 'playing')) {
+      // CRITICAL: Only match games from the SAME game level
+      if (sessionRoomId === levelSpecificRoomId && (session.state === 'waiting' || session.state === 'playing')) {
         sharedGame = session;
         break;
       }
@@ -1297,7 +1320,8 @@ sharedGame.numberCallTimer = setTimeout(() => {
 // Handle Bingo claim in live game
 async function handleClaimLiveBingo(telegramId, message) {
   const { gameMode, winPattern } = message;
-  const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}`;
+  // CRITICAL: Use level-specific room to ensure prize pool isolation
+  const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}_shared`;
   
   try {
     const liveGame = liveGameSessions.get(roomId);
@@ -1305,7 +1329,7 @@ async function handleClaimLiveBingo(telegramId, message) {
     if (!liveGame || liveGame.state !== 'playing') {
       sendToUser(telegramId, {
         type: 'error',
-        message: 'No active live game found'
+        message: 'No active live game found for this level'
       });
       return;
     }
@@ -1326,10 +1350,14 @@ async function handleClaimLiveBingo(telegramId, message) {
         type: 'bingo_claimed',
         winner: firstWinner.telegramId,
         message: 'Someone else already won',
-        isFirstToWin: false
+        isFirstToWin: false,
+        gameMode: gameMode
       });
       return;
     }
+    
+    // CRITICAL: Calculate prize pool ONLY from THIS game level
+    const poolData = calculatePrizePool(liveGame);
     
     // CRITICAL: Claim win ATOMICALLY - mark this player as first winner
     const claimTime = Date.now();
@@ -1340,10 +1368,17 @@ async function handleClaimLiveBingo(telegramId, message) {
       position: 1,  // Always position 1 since they're first
       winPattern: winPattern,
       claimTime: claimTime,
-      isFirstToWin: true
+      isFirstToWin: true,
+      winAmount: poolData.winnerPool,      // 80% of THIS level's pool
+      totalPool: poolData.prizePool,       // All money from THIS level
+      houseShare: poolData.houseShare,     // 20% to house
+      playersInGame: liveGame.players.size // How many competed
     };
     
     liveGame.winners.push(winnerRecord);
+    
+    // Store pool info on game object for end-game reporting
+    liveGame.poolData = poolData;
     
     // Get user name
     let winnerName = 'Player';
@@ -1357,7 +1392,7 @@ async function handleClaimLiveBingo(telegramId, message) {
       console.log('Could not fetch user name:', error.message);
     }
     
-    // Broadcast win to all players with CRITICAL flag
+    // Broadcast win to all players with CRITICAL flag and prize pool info
     broadcastToLiveGame(roomId, {
       type: 'live_bingo_claimed',
       winner: telegramId,
@@ -1366,13 +1401,20 @@ async function handleClaimLiveBingo(telegramId, message) {
       winPattern: winPattern,
       claimTime: claimTime,
       isFirstToWin: true,
-      serverTime: claimTime  // For audit trail
+      serverTime: claimTime,  // For audit trail
+      gameMode: gameMode,     // CRITICAL: Show which level won
+      winAmount: poolData.winnerPool,      // 80% of THIS level's pool
+      totalPool: poolData.prizePool,       // All money collected
+      houseShare: poolData.houseShare,     // 20% to house
+      playersInGame: liveGame.players.size // How many competed
     });
     
-    console.log(`🎉 FIRST BINGO CLAIMED by ${telegramId} (${winnerName}) at ${claimTime}`);
+    console.log(`🎉 FIRST BINGO CLAIMED by ${telegramId} (${winnerName}) in Play ${gameMode}`);
+    console.log(`   💰 Prize Pool: ${poolData.prizePool} coins | Winner: ${poolData.winnerPool} | House: ${poolData.houseShare}`);
+    console.log(`   👥 Players in game: ${liveGame.players.size}`);
     
     // End game immediately when first player claims bingo
-    console.log(`🏁 Ending live game immediately - first BINGO claimed by ${winnerName}`);
+    console.log(`🏁 Ending Play ${gameMode} game - first BINGO claimed by ${winnerName}`);
     endLiveGame(roomId, 'bingo_claimed');
     
   } catch (error) {
@@ -1435,23 +1477,36 @@ function endSharedGame(roomId, reason = 'completed') {
     clearInterval(sharedGame.countdownTimer);
   }
   
-  // Broadcast shared game end
+  // CRITICAL: Calculate final prize pool for THIS game level
+  const poolData = sharedGame.poolData || calculatePrizePool(sharedGame);
+  
+  // Broadcast shared game end with separate prize pool data
   broadcastToLiveGame(roomId, {
     type: 'shared_game_ended',
     gameId: sharedGame.id,
+    gameMode: sharedGame.gameMode,  // CRITICAL: Show which level
     reason: reason,
     winners: sharedGame.winners,
     totalPlayers: sharedGame.players.size,
     totalNumbersCalled: sharedGame.calledNumbers.length,
     calledNumbers: sharedGame.calledNumbers,
-    isSharedSession: true
+    isSharedSession: true,
+    // CRITICAL: Separate prize pool data
+    totalCollected: poolData.totalStake,
+    prizePool: poolData.prizePool,
+    winnerAmount: poolData.winnerPool,
+    houseShare: poolData.houseShare
   });
   
-  console.log(`🏁 Shared game ${roomId} ended. Reason: ${reason}, Winners: ${sharedGame.winners.length}, Players: ${sharedGame.players.size}`);
+  console.log(`🏁 Play ${sharedGame.gameMode} game ended. Reason: ${reason}, Winners: ${sharedGame.winners.length}, Players: ${sharedGame.players.size}`);
+  console.log(`   💰 Prize Pool Summary:`);
+  console.log(`      Total Collected: ${poolData.totalStake} coins`);
+  console.log(`      Winner Receives: ${poolData.winnerPool} coins (80%)`);
+  console.log(`      House Receives: ${poolData.houseShare} coins (20%)`);
   
   // Schedule next shared game immediately for the same game mode
   setTimeout(() => {
-    console.log(`⏰ Creating next shared game for Bingo ${sharedGame.gameMode}`);
+    console.log(`⏰ Creating next Play ${sharedGame.gameMode} game`);
     createNextSharedGame(sharedGame.gameMode);
   }, 2000); // Wait 2 seconds before creating next game
   

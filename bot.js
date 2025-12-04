@@ -3311,8 +3311,23 @@ app.get('/api/user/:telegramId', async (req, res) => {
 
 app.post('/api/like-bingo-play', async (req, res) => {
   try {
-    const { telegramId, selectedNumbers, stake, token, gameMode, balanceUpdate, gameResult: isGameResult, reason, isWin } = req.body;
+    const { 
+      telegramId, 
+      selectedNumbers, 
+      stake, 
+      token, 
+      gameMode, 
+      balanceUpdate, 
+      gameResult: isGameResult, 
+      reason, 
+      isWin,
+      totalPoolCollected,  // NEW: Total pool from WebSocket
+      playerCount,         // NEW: Number of players
+      winAmount: wsWinAmount  // NEW: Pre-calculated win amount from WebSocket
+    } = req.body;
+    
     console.log(`🎮 API: Like Bingo request - telegramId: ${telegramId}, gameMode: ${gameMode}, stake: ${stake}, gameResult: ${isGameResult}, isWin: ${isWin}`);
+    console.log(`   Pool Data: totalPoolCollected=${totalPoolCollected}, playerCount=${playerCount}, wsWinAmount=${wsWinAmount}`);
     
     // Handle game result processing (new correct way)
     if (isGameResult) {
@@ -3330,29 +3345,43 @@ app.post('/api/like-bingo-play', async (req, res) => {
       console.log(`   Original Balance: ${originalBalance}`);
       
       let winAmount = 0;
+      let gameRecord = '';
       
       if (isWin) {
-        // Calculate winnings
-        const winMultipliers = {
-          '10': 2.5,   // 10 coins -> 25 coins (2.5x)
-          '20': 3,     // 20 coins -> 60 coins (3x)  
-          '50': 3.5,   // 50 coins -> 175 coins (3.5x)
-          '100': 4     // 100 coins -> 400 coins (4x)
-        };
-        
-        const multiplier = winMultipliers[gameMode] || 2;
-        winAmount = stake * multiplier;
+        // UPDATED: Use actual pool data if available, otherwise fallback to multipliers
+        if (totalPoolCollected && totalPoolCollected > 0) {
+          // Calculate from actual pool: 80% of total pool
+          winAmount = Math.floor(totalPoolCollected * 0.80);
+          
+          console.log(`🏆 WIN FROM ACTUAL POOL:`);
+          console.log(`   Total Pool Collected: ${totalPoolCollected} coins`);
+          console.log(`   Winner Share (80%): ${winAmount} coins`);
+          console.log(`   House Share (20%): ${totalPoolCollected - winAmount} coins`);
+          console.log(`   Players in Game: ${playerCount || 1}`);
+          
+          gameRecord = `Bingo ${gameMode}: WIN - Pool: ${totalPoolCollected}, Won: ${winAmount} (80%), Net: +${winAmount - stake}`;
+        } else {
+          // Fallback to multipliers if pool data not available
+          const winMultipliers = {
+            '10': 2.5,   // 10 coins -> 25 coins (2.5x)
+            '20': 3,     // 20 coins -> 60 coins (3x)  
+            '50': 3.5,   // 50 coins -> 175 coins (3.5x)
+            '100': 4     // 100 coins -> 400 coins (4x)
+          };
+          
+          const multiplier = winMultipliers[gameMode] || 2;
+          winAmount = stake * multiplier;
+          
+          console.log(`🏆 WIN FROM MULTIPLIER (fallback):`);
+          console.log(`   Multiplier: ${multiplier}x`);
+          console.log(`   Winnings: ${winAmount}`);
+          
+          gameRecord = `Bingo ${gameMode}: WIN - Paid ${stake}, Won ${winAmount}, Net: +${winAmount - stake}`;
+        }
         
         // For win: Deduct stake, add winnings (net = winnings - stake)
         user.balance = user.balance - stake + winAmount;
         
-        const gameRecord = `Bingo ${gameMode}: WIN - Paid ${stake}, Won ${winAmount}, Net: +${winAmount - stake}`;
-        user.gameHistory = user.gameHistory || [];
-        user.gameHistory.push(gameRecord);
-        
-        console.log(`🏆 WIN CALCULATION:`);
-        console.log(`   Multiplier: ${multiplier}x`);
-        console.log(`   Winnings: ${winAmount}`);
         console.log(`   Calculation: ${originalBalance} - ${stake} + ${winAmount} = ${user.balance}`);
         console.log(`   Net Gain: +${winAmount - stake}`);
       } else {
@@ -3360,14 +3389,15 @@ app.post('/api/like-bingo-play', async (req, res) => {
         user.balance -= stake;
         winAmount = 0;
         
-        const gameRecord = `Bingo ${gameMode}: LOSS - Lost ${stake} coins`;
-        user.gameHistory = user.gameHistory || [];
-        user.gameHistory.push(gameRecord);
+        gameRecord = `Bingo ${gameMode}: LOSS - Lost ${stake} coins`;
         
         console.log(`😢 LOSS CALCULATION:`);
         console.log(`   Calculation: ${originalBalance} - ${stake} = ${user.balance}`);
         console.log(`   Net Loss: -${stake}`);
       }
+      
+      user.gameHistory = user.gameHistory || [];
+      user.gameHistory.push(gameRecord);
       
       // Keep only last 20 game records
       if (user.gameHistory.length > 20) {
@@ -3380,7 +3410,10 @@ app.post('/api/like-bingo-play', async (req, res) => {
         success: true,
         newBalance: user.balance,
         winAmount: winAmount,
-        netGain: isWin ? winAmount - stake : -stake
+        netGain: isWin ? winAmount - stake : -stake,
+        gameRecord: gameRecord,
+        totalPoolCollected: totalPoolCollected,
+        playerCount: playerCount
       });
     }
     
