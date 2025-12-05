@@ -352,37 +352,40 @@ const LikeBingo = () => {
                     console.log(`   🏆 Winner gets: ${lastMessage.winnerAmount} coins (80%)`);
                     console.log(`   🏦 House gets: ${lastMessage.houseShare} coins (20%)`);
                     
-                    setGameState('finished');
-                    setGameStarted(false);
-                    setMultiplayerCountdown(null);
-
                     // Stop any local drawing intervals
                     if (drawIntervalRef.current) {
                         clearInterval(drawIntervalRef.current);
                         drawIntervalRef.current = null;
                     }
 
-                    // Process game result only if no one claimed bingo during the game
-                    if (!bingoWinner) {
-                        const playerWon = lastMessage.winners?.some(winner => winner.telegramId === telegramId);
-                        const poolData = {
-                            totalPoolCollected: lastMessage.totalCollected,
-                            playerCount: lastMessage.totalPlayers,
-                            winAmount: lastMessage.winnerAmount
-                        };
-                        
-                        if (playerWon) {
-                            // Winner gets 80% of the pool collected from their game level
-                            await handleGameWin(poolData);
-                        } else {
-                            await handleGameLoss(poolData);
-                        }
-                    }
+                    // Give users 3 seconds to click Bingo button if they're a winner
+                    setTimeout(async () => {
+                        setGameState('finished');
+                        setGameStarted(false);
+                        setMultiplayerCountdown(null);
 
-                    // Reset game after 6 seconds - give users time to click Bingo button
-                    setTimeout(() => {
-                        resetGame();
-                    }, 6000);
+                        // Process game result only if no one claimed bingo during the game
+                        if (!bingoWinner) {
+                            const playerWon = lastMessage.winners?.some(winner => winner.telegramId === telegramId);
+                            const poolData = {
+                                totalPoolCollected: lastMessage.totalCollected,
+                                playerCount: lastMessage.totalPlayers,
+                                winAmount: lastMessage.winnerAmount
+                            };
+                            
+                            if (playerWon) {
+                                // Winner gets 80% of the pool collected from their game level
+                                await handleGameWin(poolData);
+                            } else {
+                                await handleGameLoss(poolData);
+                            }
+                        }
+
+                        // Reset game after 6 seconds - give users time to click Bingo button
+                        setTimeout(() => {
+                            resetGame();
+                        }, 6000);
+                    }, 3000); // 3 second delay before showing game over
                     break;
 
                 case 'next_shared_game_countdown':
@@ -2500,7 +2503,7 @@ const styles = {
         textAlign: "center",
         margin: "4px 0",
         fontSize: "12px",
-        color: "#ffcc00"
+        color: "#000000"
     },
     bingoSection: {
         background: "linear-gradient(to right, #ff8a00, #ff0080)",
