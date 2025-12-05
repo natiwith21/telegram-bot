@@ -82,13 +82,19 @@ const LikeBingo = () => {
 
     // Countdown timer for synchronized display (ticks down every second)
     useEffect(() => {
-        // Only run countdown when we have a numeric countdown > 0
+        // Only run countdown when we have a numeric countdown > 0 and game is not playing
         if (typeof multiplayerCountdown !== 'number' || multiplayerCountdown <= 0 || gameState === 'playing') {
             if (countdownIntervalRef.current) {
                 clearInterval(countdownIntervalRef.current);
                 countdownIntervalRef.current = null;
             }
             return;
+        }
+
+        // CRITICAL: Clear any existing interval before creating a new one
+        if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
         }
 
         countdownIntervalRef.current = setInterval(() => {
@@ -115,7 +121,7 @@ const LikeBingo = () => {
                 countdownIntervalRef.current = null;
             }
         };
-    }, [multiplayerCountdown, gameState]);
+    }, [gameState]);
 
      // Cleanup intervals on unmount
      useEffect(() => {
