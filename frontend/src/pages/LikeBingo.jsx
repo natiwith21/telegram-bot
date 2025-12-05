@@ -183,18 +183,10 @@ const LikeBingo = () => {
                         // Go to playing state immediately and show synchronized countdown
                         setGameState('playing');
 
-                        // Use server time if available for accurate sync
-                        if (lastMessage.serverTime) {
-                            const serverCountdown = lastMessage.countdown;
-                            const serverTime = lastMessage.serverTime;
-                            const clientTime = Date.now();
-                            const networkDelay = Math.abs(clientTime - serverTime);
-                            const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
-                            setMultiplayerCountdown(adjustedCountdown);
-                            console.log(`🔄 Creator countdown sync: ${adjustedCountdown}s`);
-                        } else {
-                            setMultiplayerCountdown(lastMessage.countdown);
-                        }
+                        // Use server countdown directly - NO adjustments
+                        // Server sends updates every 1 second, so trust it completely
+                        setMultiplayerCountdown(lastMessage.countdown);
+                        console.log(`🔄 Creator countdown: ${lastMessage.countdown}s (from server)`);
                     }
                     break;
 
@@ -204,18 +196,10 @@ const LikeBingo = () => {
                         // Go to playing state immediately and show synchronized countdown
                         setGameState('playing');
 
-                        // Use server time for accurate countdown sync
-                        if (lastMessage.serverTime) {
-                            const serverCountdown = lastMessage.countdown;
-                            const serverTime = lastMessage.serverTime;
-                            const clientTime = Date.now();
-                            const networkDelay = Math.abs(clientTime - serverTime);
-                            const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
-                            setMultiplayerCountdown(adjustedCountdown);
-                            console.log(`🔄 Initial countdown sync: ${adjustedCountdown}s (server: ${serverCountdown}s, delay: ${networkDelay}ms)`);
-                        } else {
-                            setMultiplayerCountdown(lastMessage.countdown);
-                        }
+                        // Use server countdown directly - NO adjustments
+                        // Server sends updates every 1 second, so trust it completely
+                        setMultiplayerCountdown(lastMessage.countdown);
+                        console.log(`🔄 Initial countdown: ${lastMessage.countdown}s (from server)`);
                     }
                     break;
 
@@ -253,35 +237,20 @@ const LikeBingo = () => {
                     // Update countdown for all players to stay synchronized
                     // Only update if we're still waiting (not playing)
                     if (gameState !== 'playing' && gameState !== 'finished') {
-                        console.log(`👥 Player joined - syncing countdown`);
-                        if (lastMessage.serverTime) {
-                            const serverCountdown = lastMessage.countdown;
-                            const serverTime = lastMessage.serverTime;
-                            const clientTime = Date.now();
-                            const networkDelay = Math.abs(clientTime - serverTime);
-                            const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
-                            setMultiplayerCountdown(adjustedCountdown);
-                        } else {
-                            setMultiplayerCountdown(lastMessage.countdown);
-                        }
+                        console.log(`👥 Player joined - countdown: ${lastMessage.countdown}s`);
+                        // Use server countdown directly - NO adjustments
+                        setMultiplayerCountdown(lastMessage.countdown);
                     }
                     break;
 
                 case 'shared_game_countdown':
-                    // CRITICAL: Use server time for accurate synchronization
+                    // CRITICAL: Use server countdown directly - NO local adjustments
+                    // Server sends countdown every 1 second, so trust it completely
                     // Only update countdown if game is NOT already playing
                     if (gameState !== 'playing' && gameState !== 'finished') {
                         const serverCountdown = lastMessage.countdown;
-                        const serverTime = lastMessage.serverTime;
-                        const clientTime = Date.now();
-                        const networkDelay = Math.abs(clientTime - serverTime);
-
-                        // Adjust countdown for network delay (max 2 seconds adjustment)
-                        const delayAdjustment = Math.min(Math.floor(networkDelay / 1000), 2);
-                        const adjustedCountdown = Math.max(0, serverCountdown - delayAdjustment);
-
-                        console.log(`🔄 Countdown sync: server=${serverCountdown}, network_delay=${networkDelay}ms, adjusted=${adjustedCountdown}`);
-                        setMultiplayerCountdown(adjustedCountdown);
+                        console.log(`🔄 Countdown update: ${serverCountdown}s (from server)`);
+                        setMultiplayerCountdown(serverCountdown);
                     }
                     break;
 
@@ -316,9 +285,14 @@ const LikeBingo = () => {
                     break;
 
                 case 'shared_number_called':
-                    // Real-time number calling - all players see the same number
-                    // Server broadcasts with serverTime to ensure perfect sync
+                    // Real-time number calling - all players see the SAME number at the SAME time
+                    // Server broadcasts immediately - no client-side delays
                     console.log(`📢 Shared number called: ${lastMessage.number}`);
+                    
+                    // Clear any pending timeout to avoid stacked timeouts
+                    if (drawIntervalRef.current) {
+                        clearTimeout(drawIntervalRef.current);
+                    }
                     
                     // Update drawn numbers from server (source of truth)
                     setDrawnNumbers(lastMessage.calledNumbers);
@@ -329,9 +303,10 @@ const LikeBingo = () => {
                         playDrawSound();
                     }
                     
-                    // Add a short delay (2 seconds) to display the called number before clearing it
-                    setTimeout(() => {
+                    // Clear the number after 2 seconds to match number calling interval
+                    drawIntervalRef.current = setTimeout(() => {
                         setCurrentCall(null);
+                        drawIntervalRef.current = null;
                     }, 2000);
                     
                     console.log(`✅ All players now see number: ${lastMessage.number}, Total called: ${lastMessage.calledNumbers.length}`);
