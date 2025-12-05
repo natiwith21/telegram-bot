@@ -179,10 +179,10 @@ const LikeBingo = () => {
                         alert(`🏆 ${lastMessage.winnerName || 'Another player'} won the Bingo game!`);
                     }
 
-                    // Reset game after showing result
+                    // Reset game after showing result - 6 second delay to give users time to click Bingo button
                     setTimeout(() => {
                         resetGame();
-                    }, 3000);
+                    }, 6000);
                     break;
 
                 // Shared multiplayer session messages (ONLY for paid versions)
@@ -374,10 +374,10 @@ const LikeBingo = () => {
                         }
                     }
 
-                    // Reset game after 3 seconds
+                    // Reset game after 6 seconds - give users time to click Bingo button
                     setTimeout(() => {
                         resetGame();
-                    }, 3000);
+                    }, 6000);
                     break;
 
                 case 'next_shared_game_countdown':
@@ -847,6 +847,12 @@ const LikeBingo = () => {
             return;
         }
 
+        // Check if late joiner trying to claim - they cannot claim if they joined mid-game
+        if (multiplayerCountdown === 'wait') {
+            alert('❌ You cannot claim Bingo because you joined after the game started. You can play in the next round!');
+            return;
+        }
+
         const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
 
         if (isPaidVersion) {
@@ -874,7 +880,8 @@ const LikeBingo = () => {
                 drawIntervalRef.current = null;
             }
 
-            setTimeout(() => resetGame(), 3000);
+            // 6 second delay to give users time to see the result
+            setTimeout(() => resetGame(), 6000);
         }
     };
 
@@ -915,7 +922,19 @@ const LikeBingo = () => {
         setMarkedCells(new Set(['2-2'])); // Reset marked cells, keep FREE center
     };
 
-    const leaveGame = () => {
+    const leaveGame = async () => {
+        // If game has started, deduct the stake as a loss
+        if (gameState === 'playing' && gameStarted && gameMode !== 'demo') {
+            console.log(`🚪 User left mid-game - deducting ${stake} coins`);
+            
+            // Process loss for leaving mid-game
+            await processGameResult(false, {
+                totalPoolCollected: stake,
+                playerCount: 1,
+                winAmount: 0
+            });
+        }
+        
         resetGame();
         navigate('/');
     };
@@ -996,6 +1015,10 @@ const LikeBingo = () => {
     };
 
     const handleBingoCardClick = (rowIndex, colIndex, number) => {
+    // Prevent late joiners from marking cells
+    if (multiplayerCountdown === 'wait') {
+        return; // Late joiner - cannot mark cells
+    }
     if (gameState !== 'playing') return;
     const cellKey = `${rowIndex}-${colIndex}`;
 
