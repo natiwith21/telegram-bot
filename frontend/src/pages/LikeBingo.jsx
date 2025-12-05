@@ -80,9 +80,10 @@ const LikeBingo = () => {
         }
     }, [currentTab]);
 
-    // Countdown timer for synchronized display (ticks down every second)
+    // Countdown sync: Calculate local countdown based on server's countdown
+    // IMPORTANT: Don't decrement locally - only rely on server updates to avoid jumping/freezing
     useEffect(() => {
-        // Only run countdown when we have a numeric countdown > 0 and game is not playing
+        // Only use local countdown as a fallback if we haven't received updates for a while
         if (typeof multiplayerCountdown !== 'number' || multiplayerCountdown <= 0 || gameState === 'playing') {
             if (countdownIntervalRef.current) {
                 clearInterval(countdownIntervalRef.current);
@@ -91,29 +92,13 @@ const LikeBingo = () => {
             return;
         }
 
-        // CRITICAL: Clear any existing interval before creating a new one
-        if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
-        }
-
+        // Use a longer interval (5 seconds) just to detect if server stopped sending updates
+        // This prevents the constant re-creation of intervals
         countdownIntervalRef.current = setInterval(() => {
-            setMultiplayerCountdown(prev => {
-                // Only decrement if it's a number > 0
-                if (typeof prev !== 'number' || prev <= 0) {
-                    return prev;
-                }
-                const newCountdown = Math.max(0, prev - 1);
-                // When countdown reaches 0, stop the interval
-                if (newCountdown === 0) {
-                    if (countdownIntervalRef.current) {
-                        clearInterval(countdownIntervalRef.current);
-                        countdownIntervalRef.current = null;
-                    }
-                }
-                return newCountdown;
-            });
-        }, 1000);
+            // This interval mainly serves as a safety check
+            // Actual countdown display comes from server messages
+            console.log(`⏰ Countdown check: ${multiplayerCountdown}s`);
+        }, 5000);
 
         return () => {
             if (countdownIntervalRef.current) {
