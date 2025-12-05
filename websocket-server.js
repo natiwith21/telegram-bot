@@ -512,30 +512,38 @@ async function handleStartMultiplayerGame(telegramId, message) {
       gameRooms.get(newRoomId).add(telegramId);
       
       // Start countdown timer with proper synchronization
-      const countdownTimer = setInterval(() => {
-      const currentTime = Date.now();
-      const timeLeft = Math.max(0, Math.ceil((startTime - currentTime) / 1000));
+      console.log(`⏰ Starting countdown timer for room ${newRoomId}. Will wait ${LIVE_GAME_CONFIG.waitTime / 1000} seconds`);
       
-      if (timeLeft <= 0) {
-      clearInterval(countdownTimer);
-      newSharedGame.countdownTimer = null;
-      // CRITICAL: Add buffer time to ensure all clients are synchronized
-        setTimeout(() => startSharedGamePlay(newRoomId), 1000);
-      } else {
-      // Broadcast synchronized countdown with server timestamp
-      // All clients use serverTime to calculate their own countdown for perfect sync
-      broadcastToLiveGame(newRoomId, {
-      type: 'shared_game_countdown',
-      countdown: timeLeft,
-      serverTime: currentTime,
-        startTime: startTime,
-          playersCount: newSharedGame.players.size,
+      const countdownTimer = setInterval(() => {
+        const currentTime = Date.now();
+        const elapsed = currentTime - Date.now();  // Get time elapsed since start
+        const timeLeft = Math.max(0, Math.floor((startTime - currentTime) / 1000));
+        
+        console.log(`⏱️ Countdown tick: ${timeLeft}s remaining (elapsed: ${Math.floor((currentTime - (startTime - LIVE_GAME_CONFIG.waitTime)) / 1000)}s)`);
+        
+        if (timeLeft <= 0) {
+          clearInterval(countdownTimer);
+          newSharedGame.countdownTimer = null;
+          console.log(`⏰ Countdown finished for room ${newRoomId}. Starting game in 1 second...`);
+          
+          // CRITICAL: Add buffer time to ensure all clients are synchronized
+          setTimeout(() => startSharedGamePlay(newRoomId), 1000);
+        } else {
+          // Broadcast synchronized countdown with server timestamp
+          // Send to ALL players in the room
+          broadcastToLiveGame(newRoomId, {
+            type: 'shared_game_countdown',
+            countdown: timeLeft,
+            serverTime: currentTime,
+            startTime: startTime,
+            playersCount: newSharedGame.players.size,
             gameId: newSharedGame.id
-           });
-         }
-       }, 1000);
+          });
+        }
+      }, 1000);
       
       newSharedGame.countdownTimer = countdownTimer;
+      console.log(`✅ Countdown interval started, broadcasting every 1 second`);
       
       // Notify creator with server time for sync
       sendToUser(telegramId, {
@@ -1306,15 +1314,24 @@ console.log(`📢 Shared game ${roomId}: Called number ${calledNumber} (${shared
 // Schedule next number call (limit to 20 numbers)
 // Use consistent 3-second interval from server
 if (sharedGame.calledNumbers.length < 20) {
-sharedGame.numberCallTimer = setTimeout(() => {
-  if (sharedGame.state === 'playing') {
+  sharedGame.numberCallTimer = setTimeout(() => {
+    if (sharedGame.state === 'playing') {
       startSharedNumberCalling(roomId);
-      }
-    }, 3000);  // Fixed interval - no variation
-  } else {
-    // End game after 20 numbers
-    endSharedGame(roomId, 'number_limit_reached');
-  }
+    }
+  }, 3000);  // Fixed interval - no variation
+} else {
+  // CRITICAL: After 20 numbers called, give players 3 seconds to claim Bingo
+  // This prevents race condition where Bingo click arrives just after game ends
+  console.log(`⏰ 20 numbers called - giving 3 second grace period for Bingo claims in ${roomId}`);
+  sharedGame.state = 'finishing';  // Transition state - still accept Bingo claims but no more numbers
+  
+  sharedGame.numberCallTimer = setTimeout(() => {
+    // If no one has claimed Bingo in the grace period, end the game
+    if (sharedGame.state === 'finishing') {
+      console.log(`🏁 Grace period expired - ending game ${roomId}`);
+      endSharedGame(roomId, 'number_limit_reached');
+    }
+  }, 3000);  // 3 second grace period
 }
 
 // Handle Bingo claim in live game
@@ -1324,15 +1341,16 @@ async function handleClaimLiveBingo(telegramId, message) {
   const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}_shared`;
   
   try {
-    const liveGame = liveGameSessions.get(roomId);
-    
-    if (!liveGame || liveGame.state !== 'playing') {
-      sendToUser(telegramId, {
-        type: 'error',
-        message: 'No active live game found for this level'
-      });
-      return;
-    }
+     const liveGame = liveGameSessions.get(roomId);
+     
+     // CRITICAL: Accept Bingo claims during 'playing' state OR during 'finishing' grace period
+     if (!liveGame || (liveGame.state !== 'playing' && liveGame.state !== 'finishing')) {
+       sendToUser(telegramId, {
+         type: 'error',
+         message: 'No active live game found for this level'
+       });
+       return;
+     }
     
     const player = liveGame.players.get(telegramId);
     if (!player) {
@@ -1415,6 +1433,13 @@ async function handleClaimLiveBingo(telegramId, message) {
     
     // End game immediately when first player claims bingo
     console.log(`🏁 Ending Play ${gameMode} game - first BINGO claimed by ${winnerName}`);
+    
+    // CRITICAL: Clear the grace period timer if it exists
+    if (liveGame.numberCallTimer) {
+      clearTimeout(liveGame.numberCallTimer);
+      liveGame.numberCallTimer = null;
+    }
+    
     endLiveGame(roomId, 'bingo_claimed');
     
   } catch (error) {

@@ -48,6 +48,8 @@ const LikeBingo = () => {
     // Use refs for interval management
     const drawIntervalRef = useRef(null);
     const countdownIntervalRef = useRef(null);
+    const lastCountdownUpdateRef = useRef(Date.now());
+    const countdownStartValueRef = useRef(null);
 
     // Static display grid (1-100 for pre-game)
     const staticNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
@@ -80,25 +82,55 @@ const LikeBingo = () => {
         }
     }, [currentTab]);
 
-    // Countdown sync: Calculate local countdown based on server's countdown
-    // IMPORTANT: Don't decrement locally - only rely on server updates to avoid jumping/freezing
+    // Countdown sync: Combine server updates with fallback local decrement
+    // This ensures smooth countdown even if WebSocket messages are delayed/batched
     useEffect(() => {
-        // Only use local countdown as a fallback if we haven't received updates for a while
+        // Only run countdown when we have a numeric countdown > 0 and game is not playing
         if (typeof multiplayerCountdown !== 'number' || multiplayerCountdown <= 0 || gameState === 'playing') {
             if (countdownIntervalRef.current) {
                 clearInterval(countdownIntervalRef.current);
                 countdownIntervalRef.current = null;
             }
+            lastCountdownUpdateRef.current = Date.now();
+            countdownStartValueRef.current = null;
             return;
         }
 
-        // Use a longer interval (5 seconds) just to detect if server stopped sending updates
-        // This prevents the constant re-creation of intervals
+        // Track when we receive a new countdown value from server
+        lastCountdownUpdateRef.current = Date.now();
+        if (countdownStartValueRef.current === null) {
+            countdownStartValueRef.current = multiplayerCountdown;
+            console.log(`🔄 Countdown started at: ${multiplayerCountdown}s`);
+        }
+
+        // CRITICAL: Create local fallback countdown that decrements smoothly
+        // This fills in gaps when server messages are delayed
+        if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+        }
+
         countdownIntervalRef.current = setInterval(() => {
-            // This interval mainly serves as a safety check
-            // Actual countdown display comes from server messages
-            console.log(`⏰ Countdown check: ${multiplayerCountdown}s`);
-        }, 5000);
+            // Calculate how much time has passed since last server update
+            const timeSinceLastUpdate = Date.now() - lastCountdownUpdateRef.current;
+            
+            setMultiplayerCountdown(prev => {
+                if (typeof prev !== 'number' || prev <= 0) {
+                    return prev;
+                }
+
+                // If more than 1500ms has passed since last server update,
+                // decrement locally to fill the gap smoothly
+                if (timeSinceLastUpdate > 1500) {
+                    const decremented = Math.max(0, prev - 1);
+                    console.log(`⏱️ Local decrement (no server update): ${prev}s → ${decremented}s`);
+                    return decremented;
+                }
+
+                // Otherwise wait for server update
+                return prev;
+            });
+        }, 500); // Check every 500ms for smooth updates
 
         return () => {
             if (countdownIntervalRef.current) {
@@ -106,7 +138,7 @@ const LikeBingo = () => {
                 countdownIntervalRef.current = null;
             }
         };
-    }, [gameState]);
+    }, [multiplayerCountdown, gameState]);
 
      // Cleanup intervals on unmount
      useEffect(() => {
@@ -249,7 +281,9 @@ const LikeBingo = () => {
                     // Only update countdown if game is NOT already playing
                     if (gameState !== 'playing' && gameState !== 'finished') {
                         const serverCountdown = lastMessage.countdown;
-                        console.log(`🔄 Countdown update: ${serverCountdown}s (from server)`);
+                        console.log(`🔄 Countdown update from server: ${serverCountdown}s`);
+                        // Track that we received an update from server
+                        lastCountdownUpdateRef.current = Date.now();
                         setMultiplayerCountdown(serverCountdown);
                     }
                     break;
