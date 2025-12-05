@@ -358,7 +358,7 @@ const LikeBingo = () => {
                         drawIntervalRef.current = null;
                     }
 
-                    // Give users 3 seconds to click Bingo button if they're a winner
+                    // Give users 6 seconds to click Bingo button if they're a winner
                     setTimeout(async () => {
                         setGameState('finished');
                         setGameStarted(false);
@@ -381,11 +381,11 @@ const LikeBingo = () => {
                             }
                         }
 
-                        // Reset game after 6 seconds - give users time to click Bingo button
+                        // Reset game after 3 seconds - give users time to see results
                         setTimeout(() => {
                             resetGame();
-                        }, 6000);
-                    }, 3000); // 3 second delay before showing game over
+                        }, 3000);
+                    }, 6000); // 6 second delay before showing game over
                     break;
 
                 case 'next_shared_game_countdown':
