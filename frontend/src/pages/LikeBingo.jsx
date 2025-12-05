@@ -338,6 +338,11 @@ const LikeBingo = () => {
                         playDrawSound();
                     }
                     
+                    // Add a short delay (2 seconds) to display the called number before clearing it
+                    setTimeout(() => {
+                        setCurrentCall(null);
+                    }, 2000);
+                    
                     console.log(`✅ All players now see number: ${lastMessage.number}, Total called: ${lastMessage.calledNumbers.length}`);
                     break;
 
@@ -831,11 +836,16 @@ const LikeBingo = () => {
                     playDrawSound();
                 }
 
+                // Add a short delay (2 seconds) to display the called number before clearing it
+                setTimeout(() => {
+                    setCurrentCall(null);
+                }, 2000);
+
                 const newDrawn = [...prev, drawnNumber];
                 console.log(`📢 Called ${drawnNumber} (${newDrawn.length}/75)`);
                 return newDrawn;
             });
-        }, 3000); // Draw every 3 seconds for demo
+        }, 5000); // Draw every 5 seconds (2s display + 3s wait) for demo
     };
 
     const claimBingo = async () => {
