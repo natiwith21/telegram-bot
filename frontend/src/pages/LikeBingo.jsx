@@ -82,25 +82,40 @@ const LikeBingo = () => {
 
     // Countdown timer for synchronized display (ticks down every second)
     useEffect(() => {
-    if (!multiplayerCountdown || multiplayerCountdown <= 0) {
-    if (countdownIntervalRef.current) {
-    clearInterval(countdownIntervalRef.current);
-    countdownIntervalRef.current = null;
-    }
-    return;
-    }
+        // Only run countdown when we have a numeric countdown > 0
+        if (typeof multiplayerCountdown !== 'number' || multiplayerCountdown <= 0 || gameState === 'playing') {
+            if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+            }
+            return;
+        }
 
-    countdownIntervalRef.current = setInterval(() => {
-        setMultiplayerCountdown(prev => Math.max(0, (prev || 0) - 1));
+        countdownIntervalRef.current = setInterval(() => {
+            setMultiplayerCountdown(prev => {
+                // Only decrement if it's a number > 0
+                if (typeof prev !== 'number' || prev <= 0) {
+                    return prev;
+                }
+                const newCountdown = Math.max(0, prev - 1);
+                // When countdown reaches 0, stop the interval
+                if (newCountdown === 0) {
+                    if (countdownIntervalRef.current) {
+                        clearInterval(countdownIntervalRef.current);
+                        countdownIntervalRef.current = null;
+                    }
+                }
+                return newCountdown;
+            });
         }, 1000);
 
-         return () => {
-             if (countdownIntervalRef.current) {
-                 clearInterval(countdownIntervalRef.current);
-                 countdownIntervalRef.current = null;
-             }
-         };
-     }, [multiplayerCountdown]);
+        return () => {
+            if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+            }
+        };
+    }, [multiplayerCountdown, gameState]);
 
      // Cleanup intervals on unmount
      useEffect(() => {
@@ -216,9 +231,18 @@ const LikeBingo = () => {
                 case 'joined_shared_mid_game':
                     if (['10', '20', '50', '100'].includes(gameMode)) {
                         console.log(`🎯 Joined shared Bingo ${gameMode} in progress`);
-                        // Go to playing state and show next game countdown in Count Down section
+                        // Go to playing state and show "wait" or next game countdown
                         setGameState('playing');
-                        setMultiplayerCountdown(lastMessage.nextGameCountdown);
+                        
+                        // If nextGameCountdown is 'wait', set it to string 'wait', otherwise set number
+                        if (lastMessage.nextGameCountdown === 'wait') {
+                            setMultiplayerCountdown('wait');
+                            console.log(`⏳ Late joiner - showing WAIT message`);
+                        } else {
+                            setMultiplayerCountdown(lastMessage.nextGameCountdown);
+                            console.log(`⏳ Late joiner - next game in ${lastMessage.nextGameCountdown}s`);
+                        }
+                        
                         setDrawnNumbers(lastMessage.calledNumbers || []);
                         setCurrentCall(lastMessage.currentCall);
                         
@@ -236,32 +260,38 @@ const LikeBingo = () => {
 
                 case 'player_joined_shared_waiting':
                     // Update countdown for all players to stay synchronized
-                    console.log(`👥 Player joined - syncing countdown`);
-                    if (lastMessage.serverTime) {
-                        const serverCountdown = lastMessage.countdown;
-                        const serverTime = lastMessage.serverTime;
-                        const clientTime = Date.now();
-                        const networkDelay = Math.abs(clientTime - serverTime);
-                        const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
-                        setMultiplayerCountdown(adjustedCountdown);
-                    } else {
-                        setMultiplayerCountdown(lastMessage.countdown);
+                    // Only update if we're still waiting (not playing)
+                    if (gameState !== 'playing' && gameState !== 'finished') {
+                        console.log(`👥 Player joined - syncing countdown`);
+                        if (lastMessage.serverTime) {
+                            const serverCountdown = lastMessage.countdown;
+                            const serverTime = lastMessage.serverTime;
+                            const clientTime = Date.now();
+                            const networkDelay = Math.abs(clientTime - serverTime);
+                            const adjustedCountdown = Math.max(0, serverCountdown - Math.floor(networkDelay / 1000));
+                            setMultiplayerCountdown(adjustedCountdown);
+                        } else {
+                            setMultiplayerCountdown(lastMessage.countdown);
+                        }
                     }
                     break;
 
                 case 'shared_game_countdown':
                     // CRITICAL: Use server time for accurate synchronization
-                    const serverCountdown = lastMessage.countdown;
-                    const serverTime = lastMessage.serverTime;
-                    const clientTime = Date.now();
-                    const networkDelay = Math.abs(clientTime - serverTime);
+                    // Only update countdown if game is NOT already playing
+                    if (gameState !== 'playing' && gameState !== 'finished') {
+                        const serverCountdown = lastMessage.countdown;
+                        const serverTime = lastMessage.serverTime;
+                        const clientTime = Date.now();
+                        const networkDelay = Math.abs(clientTime - serverTime);
 
-                    // Adjust countdown for network delay (max 2 seconds adjustment)
-                    const delayAdjustment = Math.min(Math.floor(networkDelay / 1000), 2);
-                    const adjustedCountdown = Math.max(0, serverCountdown - delayAdjustment);
+                        // Adjust countdown for network delay (max 2 seconds adjustment)
+                        const delayAdjustment = Math.min(Math.floor(networkDelay / 1000), 2);
+                        const adjustedCountdown = Math.max(0, serverCountdown - delayAdjustment);
 
-                    console.log(`🔄 Countdown sync: server=${serverCountdown}, network_delay=${networkDelay}ms, adjusted=${adjustedCountdown}`);
-                    setMultiplayerCountdown(adjustedCountdown);
+                        console.log(`🔄 Countdown sync: server=${serverCountdown}, network_delay=${networkDelay}ms, adjusted=${adjustedCountdown}`);
+                        setMultiplayerCountdown(adjustedCountdown);
+                    }
                     break;
 
                 case 'shared_game_will_start':
@@ -351,8 +381,12 @@ const LikeBingo = () => {
                     break;
 
                 case 'next_shared_game_countdown':
-                    // Show countdown for next shared game in existing Count Down UI only
-                    setMultiplayerCountdown(lastMessage.countdown);
+                    // Show countdown for next shared game only if we're finished with current game
+                    // This prevents mixing countdowns from different games
+                    if (gameState === 'finished') {
+                        setMultiplayerCountdown(lastMessage.countdown);
+                        console.log(`⏰ Next game countdown: ${lastMessage.countdown} seconds`);
+                    }
                     break;
 
                 case 'player_marked':
@@ -1646,7 +1680,9 @@ const LikeBingo = () => {
                                         <div style={styles.rightBoard}>
                                             <div style={styles.countSection}>
                                                 Count Down
-                                                <div style={styles.countBox}>{multiplayerCountdown !== null ? multiplayerCountdown : '-'}</div>
+                                                <div style={styles.countBox}>
+                                                    {multiplayerCountdown === 'wait' ? 'WAIT' : (multiplayerCountdown !== null && multiplayerCountdown !== 0 ? multiplayerCountdown : (multiplayerCountdown === 0 ? '0' : '-'))}
+                                                </div>
                                             </div>
 
                                             <div style={styles.currentCallSection}>
