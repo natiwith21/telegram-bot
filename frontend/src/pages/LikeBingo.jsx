@@ -1651,41 +1651,38 @@ const LikeBingo = () => {
                                     {renderStaticGrid()}
                                     
 
-                                    {/* Bottom Row: Mini Card + Buttons */}
-                                    <div style={styles.bottomRow}>
-                                        {/* Mini Bingo Card (24% width) - only show if number selected */}
-                                        {hasSelectedNumber && renderMiniBingoCard()}
+                                    {/* Bottom Row: Mini Card + Buttons (only show if number selected) */}
+                                    {hasSelectedNumber && (
+                                        <div style={styles.bottomRow}>
+                                            {/* Mini Bingo Card (24% width) */}
+                                            {renderMiniBingoCard()}
 
-                                        {/* Action Buttons (66% width) - always visible */}
-                                        <div style={{...styles.actionButtons, ...(hasSelectedNumber ? {} : {marginLeft: 0})}}>
-                                            <button
-                                            style={{ 
-                                                ...styles.button, 
-                                                backgroundColor: hasSelectedNumber ? "#2f88ff" : "#999999",
-                                                opacity: 1,
-                                                cursor: hasSelectedNumber ? 'pointer' : 'not-allowed',
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                            onClick={refreshCard}
-                                            disabled={!hasSelectedNumber}
-                                            >
-                                            Refresh
-                                            </button>
-                                            <button
-                                            style={{ 
-                                                ...styles.button, 
-                                                backgroundColor: hasSelectedNumber ? "#FF4500" : "#999999",
-                                                opacity: 1,
-                                                cursor: hasSelectedNumber ? 'pointer' : 'not-allowed',
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                            onClick={startGame}
-                                            disabled={!hasSelectedNumber || isLoading}
-                                            >
-                                            {isLoading ? 'Starting...' : 'Start Game'}
-                                            </button>
+                                            {/* Action Buttons (66% width) */}
+                                            <div style={styles.actionButtons}>
+                                                <button
+                                                style={{ 
+                                                    ...styles.button, 
+                                                    backgroundColor: "#2f88ff",
+                                                    cursor: 'pointer'
+                                                }}
+                                                onClick={refreshCard}
+                                                >
+                                                Refresh
+                                                </button>
+                                                <button
+                                                style={{ 
+                                                    ...styles.button, 
+                                                    backgroundColor: "#FF4500",
+                                                    cursor: 'pointer'
+                                                }}
+                                                onClick={startGame}
+                                                disabled={isLoading}
+                                                >
+                                                {isLoading ? 'Starting...' : 'Start Game'}
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </>
                             )}
 
