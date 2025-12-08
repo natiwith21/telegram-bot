@@ -516,7 +516,6 @@ async function handleStartMultiplayerGame(telegramId, message) {
       
       const countdownTimer = setInterval(() => {
         const currentTime = Date.now();
-        const elapsed = currentTime - Date.now();  // Get time elapsed since start
         const timeLeft = Math.max(0, Math.floor((startTime - currentTime) / 1000));
         
         console.log(`⏱️ Countdown tick: ${timeLeft}s remaining (elapsed: ${Math.floor((currentTime - (startTime - LIVE_GAME_CONFIG.waitTime)) / 1000)}s)`);
@@ -1332,10 +1331,11 @@ if (sharedGame.calledNumbers.length < 20) {
       endSharedGame(roomId, 'number_limit_reached');
     }
   }, 3000);  // 3 second grace period
-}
+  }
+  }
 
-// Handle Bingo claim in live game
-async function handleClaimLiveBingo(telegramId, message) {
+  // Handle Bingo claim in live game
+  async function handleClaimLiveBingo(telegramId, message) {
   const { gameMode, winPattern } = message;
   // CRITICAL: Use level-specific room to ensure prize pool isolation
   const roomId = `${LIVE_GAME_CONFIG.roomPrefix}${gameMode}_shared`;
