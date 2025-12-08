@@ -1651,30 +1651,43 @@ const LikeBingo = () => {
                                     {renderStaticGrid()}
                                     
 
-                                    {/* Bottom Row: Mini Card + Buttons (only show if number selected) */}
-                                    {hasSelectedNumber && (
-                                        <div style={styles.bottomRow}>
-                                            {/* Mini Bingo Card (24% width) */}
-                                            {renderMiniBingoCard()}
+                                    {/* Bottom Row: Mini Card + Buttons (always visible, buttons appear blurred until number selected) */}
+                                    <div style={styles.bottomRow}>
+                                        {/* Mini Bingo Card (24% width) */}
+                                        {renderMiniBingoCard()}
 
-                                            {/* Action Buttons (66% width) */}
-                                            <div style={styles.actionButtons}>
-                                                <button
-                                                style={{ ...styles.button, backgroundColor: "#2f88ff" }}
-                                                onClick={refreshCard}
-                                                >
-                                                Refresh
-                                                </button>
-                                                <button
-                                                style={{ ...styles.button, backgroundColor: "#FF4500" }}
-                                                onClick={startGame}
-                                                disabled={isLoading}
-                                                >
-                                                {isLoading ? 'Starting...' : 'Start Game'}
-                                                </button>
-                                            </div>
+                                        {/* Action Buttons (66% width) */}
+                                        <div style={styles.actionButtons}>
+                                            <button
+                                            style={{ 
+                                                ...styles.button, 
+                                                backgroundColor: "#2f88ff",
+                                                opacity: hasSelectedNumber ? 1 : 0.5,
+                                                cursor: hasSelectedNumber ? 'pointer' : 'not-allowed',
+                                                filter: hasSelectedNumber ? 'blur(0px)' : 'blur(5px)',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                            onClick={refreshCard}
+                                            disabled={!hasSelectedNumber}
+                                            >
+                                            Refresh
+                                            </button>
+                                            <button
+                                            style={{ 
+                                                ...styles.button, 
+                                                backgroundColor: "#FF4500",
+                                                opacity: hasSelectedNumber ? 1 : 0.5,
+                                                cursor: hasSelectedNumber ? 'pointer' : 'not-allowed',
+                                                filter: hasSelectedNumber ? 'blur(0px)' : 'blur(5px)',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                            onClick={startGame}
+                                            disabled={!hasSelectedNumber || isLoading}
+                                            >
+                                            {isLoading ? 'Starting...' : 'Start Game'}
+                                            </button>
                                         </div>
-                                    )}
+                                    </div>
                                 </>
                             )}
 
