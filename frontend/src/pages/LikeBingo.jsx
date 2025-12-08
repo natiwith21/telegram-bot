@@ -717,11 +717,9 @@ const LikeBingo = () => {
                  }
  
                  console.log('💰 Starting paid game locally - balance will be processed on game end only');
-                 showBalanceNotification(`🎮 Game started! ${stake} coins at risk`, 'info');
-             } else {
+                 } else {
                  console.log('🎮 Starting demo game - no balance effects');
-                 showBalanceNotification(`🎮 Demo game started!`, 'info');
-             }
+                 }
  
              setGameNumber(prev => prev + 1);
              setGameState('playing');
@@ -1722,17 +1720,17 @@ const LikeBingo = () => {
                                         </div>
 
                                         <div style={styles.rightBoard}>
-                                            <div style={styles.countSection}>
-                                                Count Down
-                                                <div style={styles.countBox}>
-                                                    {multiplayerCountdown === 'wait' ? 'WAIT' : (multiplayerCountdown !== null && multiplayerCountdown !== 0 ? multiplayerCountdown : (multiplayerCountdown === 0 ? '0' : '-'))}
-                                                </div>
-                                            </div>
+                                             <div style={styles.countSection}>
+                                                 Count Down
+                                                 <div style={styles.countBox}>
+                                                     {multiplayerCountdown || '-'}
+                                                 </div>
+                                             </div>
 
-                                            <div style={styles.currentCallSection}>
-                                                <div>Current Call</div>
-                                                <div style={styles.callCircle}>{currentCall || '-'}</div>
-                                            </div>
+                                             <div style={styles.currentCallSection}>
+                                                 <div>Current Call</div>
+                                                 <div style={styles.callCircle}>{currentCall !== null ? currentCall : '-'}</div>
+                                             </div>
 
                                             <div style={styles.smallBoard}>
                                                 <div style={styles.smallHeader}>
