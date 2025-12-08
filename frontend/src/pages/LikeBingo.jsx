@@ -1651,20 +1651,19 @@ const LikeBingo = () => {
                                     {renderStaticGrid()}
                                     
 
-                                    {/* Bottom Row: Mini Card + Buttons (always visible, buttons appear blurred until number selected) */}
+                                    {/* Bottom Row: Mini Card + Buttons */}
                                     <div style={styles.bottomRow}>
-                                        {/* Mini Bingo Card (24% width) */}
-                                        {renderMiniBingoCard()}
+                                        {/* Mini Bingo Card (24% width) - only show if number selected */}
+                                        {hasSelectedNumber && renderMiniBingoCard()}
 
-                                        {/* Action Buttons (66% width) */}
-                                        <div style={styles.actionButtons}>
+                                        {/* Action Buttons (66% width) - always visible */}
+                                        <div style={{...styles.actionButtons, ...(hasSelectedNumber ? {} : {marginLeft: 0})}}>
                                             <button
                                             style={{ 
                                                 ...styles.button, 
-                                                backgroundColor: "#2f88ff",
-                                                opacity: hasSelectedNumber ? 1 : 0.5,
+                                                backgroundColor: hasSelectedNumber ? "#2f88ff" : "#999999",
+                                                opacity: 1,
                                                 cursor: hasSelectedNumber ? 'pointer' : 'not-allowed',
-                                                filter: hasSelectedNumber ? 'blur(0px)' : 'blur(5px)',
                                                 transition: 'all 0.3s ease'
                                             }}
                                             onClick={refreshCard}
@@ -1675,10 +1674,9 @@ const LikeBingo = () => {
                                             <button
                                             style={{ 
                                                 ...styles.button, 
-                                                backgroundColor: "#FF4500",
-                                                opacity: hasSelectedNumber ? 1 : 0.5,
+                                                backgroundColor: hasSelectedNumber ? "#FF4500" : "#999999",
+                                                opacity: 1,
                                                 cursor: hasSelectedNumber ? 'pointer' : 'not-allowed',
-                                                filter: hasSelectedNumber ? 'blur(0px)' : 'blur(5px)',
                                                 transition: 'all 0.3s ease'
                                             }}
                                             onClick={startGame}
