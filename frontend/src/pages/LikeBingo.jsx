@@ -113,7 +113,7 @@ const LikeBingo = () => {
         countdownIntervalRef.current = setInterval(() => {
             // Calculate how much time has passed since last server update
             const timeSinceLastUpdate = Date.now() - lastCountdownUpdateRef.current;
-            
+
             setMultiplayerCountdown(prev => {
                 if (typeof prev !== 'number' || prev <= 0) {
                     return prev;
@@ -140,19 +140,19 @@ const LikeBingo = () => {
         };
     }, [multiplayerCountdown, gameState]);
 
-     // Cleanup intervals on unmount
-     useEffect(() => {
-         return () => {
-             if (drawIntervalRef.current) {
-                 clearInterval(drawIntervalRef.current);
-                 drawIntervalRef.current = null;
-             }
-             if (countdownIntervalRef.current) {
-                 clearInterval(countdownIntervalRef.current);
-                 countdownIntervalRef.current = null;
-             }
-         };
-     }, []);
+    // Cleanup intervals on unmount
+    useEffect(() => {
+        return () => {
+            if (drawIntervalRef.current) {
+                clearInterval(drawIntervalRef.current);
+                drawIntervalRef.current = null;
+            }
+            if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+            }
+        };
+    }, []);
 
     // Handle WebSocket messages for multiplayer
     useEffect(() => {
@@ -240,7 +240,7 @@ const LikeBingo = () => {
                         console.log(`🎯 Joined shared Bingo ${gameMode} in progress`);
                         // Go to playing state and show "wait" or next game countdown
                         setGameState('playing');
-                        
+
                         // If nextGameCountdown is 'wait', set it to string 'wait', otherwise set number
                         if (lastMessage.nextGameCountdown === 'wait') {
                             setMultiplayerCountdown('wait');
@@ -249,10 +249,10 @@ const LikeBingo = () => {
                             setMultiplayerCountdown(lastMessage.nextGameCountdown);
                             console.log(`⏳ Late joiner - next game in ${lastMessage.nextGameCountdown}s`);
                         }
-                        
+
                         setDrawnNumbers(lastMessage.calledNumbers || []);
                         setCurrentCall(lastMessage.currentCall);
-                        
+
                         // CRITICAL: Sync all marked numbers from other players
                         if (lastMessage.allMarkedNumbers) {
                             const allMarked = new Set();
@@ -322,12 +322,12 @@ const LikeBingo = () => {
                     // Real-time number calling - all players see the SAME number at the SAME time
                     // Server broadcasts immediately - no client-side delays
                     console.log(`📢 Shared number called: ${lastMessage.number}`);
-                    
+
                     // Clear any pending timeout to avoid stacked timeouts
                     if (drawIntervalRef.current) {
                         clearTimeout(drawIntervalRef.current);
                     }
-                    
+
                     // Update drawn numbers from server (source of truth)
                     setDrawnNumbers(lastMessage.calledNumbers);
                     setCurrentCall(lastMessage.number);
@@ -336,13 +336,13 @@ const LikeBingo = () => {
                     if (soundEnabled) {
                         playDrawSound();
                     }
-                    
+
                     // Clear the number after 2 seconds to match number calling interval
                     drawIntervalRef.current = setTimeout(() => {
                         setCurrentCall(null);
                         drawIntervalRef.current = null;
                     }, 2000);
-                    
+
                     console.log(`✅ All players now see number: ${lastMessage.number}, Total called: ${lastMessage.calledNumbers.length}`);
                     break;
 
@@ -351,7 +351,7 @@ const LikeBingo = () => {
                     console.log(`   💰 Prize Pool: ${lastMessage.totalCollected} coins`);
                     console.log(`   🏆 Winner gets: ${lastMessage.winnerAmount} coins (80%)`);
                     console.log(`   🏦 House gets: ${lastMessage.houseShare} coins (20%)`);
-                    
+
                     // Stop any local drawing intervals
                     if (drawIntervalRef.current) {
                         clearInterval(drawIntervalRef.current);
@@ -372,7 +372,7 @@ const LikeBingo = () => {
                                 playerCount: lastMessage.totalPlayers,
                                 winAmount: lastMessage.winnerAmount
                             };
-                            
+
                             if (playerWon) {
                                 // Winner gets 80% of the pool collected from their game level
                                 await handleGameWin(poolData);
@@ -429,7 +429,12 @@ const LikeBingo = () => {
         console.log(`   Pool Data:`, poolData);
 
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/like-bingo-play`, {
+            // Use backend URL from environment or fallback to Render production URL
+            const backendUrl = import.meta.env.VITE_BACKEND_URL ||
+                process.env.REACT_APP_BACKEND_URL ||
+                'https://telegram-bot-u2ni.onrender.com';
+
+            const response = await fetch(`${backendUrl}/api/like-bingo-play`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -547,16 +552,24 @@ const LikeBingo = () => {
         }
 
         // Ensure telegramId is a string
-         const cleanTelegramId = String(telegramId).trim();
-         console.log(`🔄 Loading user data for telegramId: "${cleanTelegramId}"`);
-        
-         try {
-             const backendUrl = import.meta.env.VITE_BACKEND_URL || window.location.origin;
-             const apiUrl = `${backendUrl}/api/user/${cleanTelegramId}`;
-             console.log('🔗 Backend URL:', backendUrl);
-             console.log('📡 Full API URL:', apiUrl);
+        const cleanTelegramId = String(telegramId).trim();
+        console.log(`🔄 Loading user data for telegramId: "${cleanTelegramId}"`);
 
-             const response = await fetch(apiUrl);
+        try {
+            // Use backend URL from environment or fallback to Render production URL
+            const backendUrl = import.meta.env.VITE_BACKEND_URL ||
+                process.env.REACT_APP_BACKEND_URL ||
+                'https://telegram-bot-u2ni.onrender.com';
+            const apiUrl = `${backendUrl}/api/user/${cleanTelegramId}`;
+            console.log('🔗 Backend URL:', backendUrl);
+            console.log('📡 Full API URL:', apiUrl);
+
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -652,95 +665,95 @@ const LikeBingo = () => {
     };
 
     const startGame = async () => {
-         // For demo mode, skip balance checks
-         if (gameMode === 'demo') {
-             setGameNumber(prev => prev + 1);
-             setGameState('playing');
-             startDrawing();
-             return;
-         }
- 
-         if (userBalance < stake) {
-             setShowWarning(true);
-             return;
-         }
- 
-         setIsLoading(true);
- 
-         try {
-             // For demo mode or if no telegramId, skip API call
-             if (!telegramId) {
-                 // Demo mode - just proceed without balance changes
-                 console.log('🎮 No telegramId - starting demo game without balance effects');
-                 setGameNumber(prev => prev + 1);
-                 setGameState('playing');
-                 startDrawing();
-                 setIsLoading(false);
-                 return;
-             }
- 
-             // For Like Bingo, select 10 random numbers from 1-100
-             const selectedNumbers = [];
-             while (selectedNumbers.length < 10) {
-                 const num = Math.floor(Math.random() * 100) + 1;
-                 if (!selectedNumbers.includes(num)) {
-                     selectedNumbers.push(num);
-                 }
-             }
- 
-             // Send shared multiplayer game start request via WebSocket (ONLY for paid versions)
-             const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
- 
-             if (isConnected && isPaidVersion) {
-                 console.log(`🌐 Starting shared multiplayer Bingo ${gameMode}`);
-                 sendMessage({
-                     type: 'start_multiplayer_game',
-                     telegramId,
-                     selectedNumbers,
-                     stake,
-                     token,
-                     gameMode
-                 });
- 
-                 console.log('🎮 Starting shared multiplayer game - balance will be updated on game end only');
-                 setGameNumber(prev => prev + 1);
-                 // Don't set game state here - wait for WebSocket response
-                 setIsLoading(false);
-                 return;
-             }
- 
-             // Fallback to local game if WebSocket not connected - NO API CALLS
-             if (gameMode !== 'demo') {
-                 // Check if user has sufficient balance before starting
-                 if (userBalance < stake) {
-                     alert(`Insufficient balance! You have ${userBalance} coins but need ${stake} coins to play.`);
-                     setIsLoading(false);
-                     return;
-                 }
- 
-                 console.log('💰 Starting paid game locally - balance will be processed on game end only');
-                 } else {
-                 console.log('🎮 Starting demo game - no balance effects');
-                 }
- 
-             setGameNumber(prev => prev + 1);
-             setGameState('playing');
-             startDrawing();
-         } catch (error) {
-             console.error('Game start error:', error);
- 
-             if (gameMode === 'demo') {
-                 // For demo, proceed anyway without balance changes
-                 setGameNumber(prev => prev + 1);
-                 setGameState('playing');
-                 startDrawing();
-             } else {
-                 alert('Failed to start game. Please try again.');
-             }
-         } finally {
-             setIsLoading(false);
-         }
-     };
+        // For demo mode, skip balance checks
+        if (gameMode === 'demo') {
+            setGameNumber(prev => prev + 1);
+            setGameState('playing');
+            startDrawing();
+            return;
+        }
+
+        if (userBalance < stake) {
+            setShowWarning(true);
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // For demo mode or if no telegramId, skip API call
+            if (!telegramId) {
+                // Demo mode - just proceed without balance changes
+                console.log('🎮 No telegramId - starting demo game without balance effects');
+                setGameNumber(prev => prev + 1);
+                setGameState('playing');
+                startDrawing();
+                setIsLoading(false);
+                return;
+            }
+
+            // For Like Bingo, select 10 random numbers from 1-100
+            const selectedNumbers = [];
+            while (selectedNumbers.length < 10) {
+                const num = Math.floor(Math.random() * 100) + 1;
+                if (!selectedNumbers.includes(num)) {
+                    selectedNumbers.push(num);
+                }
+            }
+
+            // Send shared multiplayer game start request via WebSocket (ONLY for paid versions)
+            const isPaidVersion = ['10', '20', '50', '100'].includes(gameMode);
+
+            if (isConnected && isPaidVersion) {
+                console.log(`🌐 Starting shared multiplayer Bingo ${gameMode}`);
+                sendMessage({
+                    type: 'start_multiplayer_game',
+                    telegramId,
+                    selectedNumbers,
+                    stake,
+                    token,
+                    gameMode
+                });
+
+                console.log('🎮 Starting shared multiplayer game - balance will be updated on game end only');
+                setGameNumber(prev => prev + 1);
+                // Don't set game state here - wait for WebSocket response
+                setIsLoading(false);
+                return;
+            }
+
+            // Fallback to local game if WebSocket not connected - NO API CALLS
+            if (gameMode !== 'demo') {
+                // Check if user has sufficient balance before starting
+                if (userBalance < stake) {
+                    alert(`Insufficient balance! You have ${userBalance} coins but need ${stake} coins to play.`);
+                    setIsLoading(false);
+                    return;
+                }
+
+                console.log('💰 Starting paid game locally - balance will be processed on game end only');
+            } else {
+                console.log('🎮 Starting demo game - no balance effects');
+            }
+
+            setGameNumber(prev => prev + 1);
+            setGameState('playing');
+            startDrawing();
+        } catch (error) {
+            console.error('Game start error:', error);
+
+            if (gameMode === 'demo') {
+                // For demo, proceed anyway without balance changes
+                setGameNumber(prev => prev + 1);
+                setGameState('playing');
+                startDrawing();
+            } else {
+                alert('Failed to start game. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const startCountdown = () => {
         let count = 5;
@@ -939,7 +952,7 @@ const LikeBingo = () => {
         // If game has started, deduct the stake as a loss
         if (gameState === 'playing' && gameStarted && gameMode !== 'demo') {
             console.log(`🚪 User left mid-game - deducting ${stake} coins`);
-            
+
             // Process loss for leaving mid-game
             await processGameResult(false, {
                 totalPoolCollected: stake,
@@ -947,7 +960,7 @@ const LikeBingo = () => {
                 winAmount: 0
             });
         }
-        
+
         resetGame();
         navigate('/');
     };
@@ -1028,35 +1041,35 @@ const LikeBingo = () => {
     };
 
     const handleBingoCardClick = (rowIndex, colIndex, number) => {
-    // Prevent late joiners from marking cells
-    if (multiplayerCountdown === 'wait') {
-        return; // Late joiner - cannot mark cells
-    }
-    if (gameState !== 'playing') return;
-    const cellKey = `${rowIndex}-${colIndex}`;
+        // Prevent late joiners from marking cells
+        if (multiplayerCountdown === 'wait') {
+            return; // Late joiner - cannot mark cells
+        }
+        if (gameState !== 'playing') return;
+        const cellKey = `${rowIndex}-${colIndex}`;
 
-    setMarkedCells(prev => {
-    const newMarked = new Set(prev);
-    if (newMarked.has(cellKey)) {
-    newMarked.delete(cellKey);
-    } else {
-    newMarked.add(cellKey);
-    }
-    
-        // CRITICAL: Broadcast marked cell to all players so everyone sees same board state
+        setMarkedCells(prev => {
+            const newMarked = new Set(prev);
+            if (newMarked.has(cellKey)) {
+                newMarked.delete(cellKey);
+            } else {
+                newMarked.add(cellKey);
+            }
+
+            // CRITICAL: Broadcast marked cell to all players so everyone sees same board state
             if (isConnected && sendMessage) {
-                 sendMessage({
-                     type: 'player_mark',
-                     number: cellKey, // Send cell key for synchronization
-                     roomId: 'like-bingo-room',
-                     telegramId: telegramId
-                 });
-                 console.log(`📤 Broadcasted mark for cell ${cellKey} to all players`);
-             }
-             
-             return newMarked;
-         });
-     };
+                sendMessage({
+                    type: 'player_mark',
+                    number: cellKey, // Send cell key for synchronization
+                    roomId: 'like-bingo-room',
+                    telegramId: telegramId
+                });
+                console.log(`📤 Broadcasted mark for cell ${cellKey} to all players`);
+            }
+
+            return newMarked;
+        });
+    };
 
     // Check for winning Bingo pattern (any full row, column, or diagonal)
     const checkBingoCardWin = (marked) => {
@@ -1508,11 +1521,14 @@ const LikeBingo = () => {
                                 🔄 Refresh Wallet
                             </button>
                         )}
-                        {process.env.NODE_ENV === 'development' && (
+                        {import.meta.env.DEV && (
                             <button
                                 onClick={async () => {
                                     try {
-                                        const testUrl = `${process.env.REACT_APP_BACKEND_URL}/api/user/5888330255`;
+                                        const backendUrl = import.meta.env.VITE_BACKEND_URL ||
+                                            process.env.REACT_APP_BACKEND_URL ||
+                                            'https://telegram-bot-u2ni.onrender.com';
+                                        const testUrl = `${backendUrl}/api/user/5888330255`;
                                         const response = await fetch(testUrl);
                                         const data = await response.json();
                                         console.log('Test API Response:', data);
@@ -1649,7 +1665,7 @@ const LikeBingo = () => {
                                 <>
                                     {/* Static Grid */}
                                     {renderStaticGrid()}
-                                    
+
 
                                     {/* Bottom Row: Mini Card + Buttons (only show if number selected) */}
                                     {hasSelectedNumber && (
@@ -1660,25 +1676,25 @@ const LikeBingo = () => {
                                             {/* Action Buttons (66% width) */}
                                             <div style={styles.actionButtons}>
                                                 <button
-                                                style={{ 
-                                                    ...styles.button, 
-                                                    backgroundColor: "#2f88ff",
-                                                    cursor: 'pointer'
-                                                }}
-                                                onClick={refreshCard}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: "#2f88ff",
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={refreshCard}
                                                 >
-                                                Refresh
+                                                    Refresh
                                                 </button>
                                                 <button
-                                                style={{ 
-                                                    ...styles.button, 
-                                                    backgroundColor: "#FF4500",
-                                                    cursor: 'pointer'
-                                                }}
-                                                onClick={startGame}
-                                                disabled={isLoading}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: "#FF4500",
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={startGame}
+                                                    disabled={isLoading}
                                                 >
-                                                {isLoading ? 'Starting...' : 'Start Game'}
+                                                    {isLoading ? 'Starting...' : 'Start Game'}
                                                 </button>
                                             </div>
                                         </div>
@@ -1712,35 +1728,35 @@ const LikeBingo = () => {
                                     <div style={styles.mainSection}>
                                         <div style={styles.leftBoard}>
                                             <div style={styles.bingoHeaderGrid}>
-                                                <span style={{...styles.bingoLetter, background: '#f7b733'}}>B</span>
-                                                <span style={{...styles.bingoLetter, background: '#6dd47e'}}>I</span>
-                                                <span style={{...styles.bingoLetter, background: '#5dc0f3'}}>N</span>
-                                                <span style={{...styles.bingoLetter, background: '#e94f37'}}>G</span>
-                                                <span style={{...styles.bingoLetter, background: '#9b59b6'}}>O</span>
+                                                <span style={{ ...styles.bingoLetter, background: '#f7b733' }}>B</span>
+                                                <span style={{ ...styles.bingoLetter, background: '#6dd47e' }}>I</span>
+                                                <span style={{ ...styles.bingoLetter, background: '#5dc0f3' }}>N</span>
+                                                <span style={{ ...styles.bingoLetter, background: '#e94f37' }}>G</span>
+                                                <span style={{ ...styles.bingoLetter, background: '#9b59b6' }}>O</span>
                                             </div>
                                             {renderLightBingoBoard()}
                                         </div>
 
                                         <div style={styles.rightBoard}>
-                                             <div style={styles.countSection}>
-                                                 Count Down
-                                                 <div style={styles.countBox}>
-                                                     {multiplayerCountdown || '-'}
-                                                 </div>
-                                             </div>
+                                            <div style={styles.countSection}>
+                                                Count Down
+                                                <div style={styles.countBox}>
+                                                    {multiplayerCountdown || '-'}
+                                                </div>
+                                            </div>
 
-                                             <div style={styles.currentCallSection}>
-                                                 <div>Current Call</div>
-                                                 <div style={styles.callCircle}>{currentCall !== null ? currentCall : '-'}</div>
-                                             </div>
+                                            <div style={styles.currentCallSection}>
+                                                <div>Current Call</div>
+                                                <div style={styles.callCircle}>{currentCall !== null ? currentCall : '-'}</div>
+                                            </div>
 
                                             <div style={styles.smallBoard}>
                                                 <div style={styles.smallHeader}>
-                                                    <span style={{...styles.smallLetter, background: '#f7b733'}}>B</span>
-                                                    <span style={{...styles.smallLetter, background: '#6dd47e'}}>I</span>
-                                                    <span style={{...styles.smallLetter, background: '#5dc0f3'}}>N</span>
-                                                    <span style={{...styles.smallLetter, background: '#e94f37'}}>G</span>
-                                                    <span style={{...styles.smallLetter, background: '#9b59b6'}}>O</span>
+                                                    <span style={{ ...styles.smallLetter, background: '#f7b733' }}>B</span>
+                                                    <span style={{ ...styles.smallLetter, background: '#6dd47e' }}>I</span>
+                                                    <span style={{ ...styles.smallLetter, background: '#5dc0f3' }}>N</span>
+                                                    <span style={{ ...styles.smallLetter, background: '#e94f37' }}>G</span>
+                                                    <span style={{ ...styles.smallLetter, background: '#9b59b6' }}>O</span>
                                                 </div>
                                                 <div style={styles.boardGrid}>
                                                     {bingoCard.map((row, rIdx) =>
@@ -2046,10 +2062,10 @@ const styles = {
         marginTop: "8px"
     },
     bottomRow: {
-    marginTop: "6px",
-    display: "flex",
-    gap: "20px",
-    alignItems: "flex-start"
+        marginTop: "6px",
+        display: "flex",
+        gap: "20px",
+        alignItems: "flex-start"
     },
     miniCard: {
         background: "rgba(255,255,255,0.12)",
@@ -2072,34 +2088,34 @@ const styles = {
         fontSize: "9px"
     },
     actionButtons: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "8px",
-    flex: 1,
-    marginLeft: "auto"
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "8px",
+        flex: 1,
+        marginLeft: "auto"
     },
     buttonRow: {
-    marginTop: "14px",
-    display: "flex",
-    gap: "12px",
-    alignItems: "flex-start"
+        marginTop: "14px",
+        display: "flex",
+        gap: "12px",
+        alignItems: "flex-start"
     },
     button: {
-    border: "none",
-    padding: "8px 16px",
-    borderRadius: "24px",
-    fontWeight: "700",
-    fontSize: "14px",
-    cursor: "pointer",
-    color: "#fff",
-    transition: "all 0.2s ease",
-    height: "38px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    lineHeight: "1",
-    whiteSpace: "nowrap",
-    minWidth: "90px"
+        border: "none",
+        padding: "8px 16px",
+        borderRadius: "24px",
+        fontWeight: "700",
+        fontSize: "14px",
+        cursor: "pointer",
+        color: "#fff",
+        transition: "all 0.2s ease",
+        height: "38px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: "1",
+        whiteSpace: "nowrap",
+        minWidth: "90px"
     },
     refreshBtn: {
         background: "#2f88ff",
@@ -2166,50 +2182,50 @@ const styles = {
     },
     // Second UI Styles (light purple theme)
     topBar: {
-    width: "100%",
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    textAlign: "center",
-    gap: "6px",
-    fontSize: "11px",
-    fontWeight: "500",
-    color: "#1c1c2e",
-    padding: "3px 0"
+        width: "100%",
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        textAlign: "center",
+        gap: "6px",
+        fontSize: "11px",
+        fontWeight: "500",
+        color: "#1c1c2e",
+        padding: "3px 0"
     },
     separator: {
-    width: "100%",
-    height: "1px",
-    backgroundColor: "rgba(28,28,46,0.2)",
-    margin: "3px 0"
+        width: "100%",
+        height: "1px",
+        backgroundColor: "rgba(28,28,46,0.2)",
+        margin: "3px 0"
     },
     mainSection: {
-    display: "flex",
-    justifyContent: "space-between",
-    width: "100%",
-    gap: "6px",
-    marginTop: "3px"
+        display: "flex",
+        justifyContent: "space-between",
+        width: "100%",
+        gap: "6px",
+        marginTop: "3px"
     },
     leftBoard: {
-    flex: 1,
-    display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
-    gap: "3px",
-    background: "rgba(255,255,255,0.2)",
-    padding: "4px",
-    borderRadius: "10px"
+        flex: 1,
+        display: "grid",
+        gridTemplateColumns: "repeat(5, 1fr)",
+        gap: "3px",
+        background: "rgba(255,255,255,0.2)",
+        padding: "4px",
+        borderRadius: "10px"
     },
     leftBoardCell: {
-    background: "rgba(255,255,255,0.5)",
-    textAlign: "center",
-    padding: "3px 0",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "500",
-    color: "#333",
-    height: "18px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center"
+        background: "rgba(255,255,255,0.5)",
+        textAlign: "center",
+        padding: "3px 0",
+        borderRadius: "4px",
+        fontSize: "11px",
+        fontWeight: "500",
+        color: "#333",
+        height: "18px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
     },
     bingoHeaderGrid: {
         gridColumn: "span 5",
@@ -2223,62 +2239,62 @@ const styles = {
         borderRadius: "50%"
     },
     rightBoard: {
-    flex: 1,
-    background: "rgba(255,255,255,0.2)",
-    padding: "4px",
-    borderRadius: "10px",
-    textAlign: "center"
+        flex: 1,
+        background: "rgba(255,255,255,0.2)",
+        padding: "4px",
+        borderRadius: "10px",
+        textAlign: "center"
     },
     countSection: {
-    background: "#b080d0",
-    color: "white",
-    borderRadius: "6px",
-    padding: "5px",
-    marginBottom: "5px",
-    fontSize: "12px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "3px"
+        background: "#b080d0",
+        color: "white",
+        borderRadius: "6px",
+        padding: "5px",
+        marginBottom: "5px",
+        fontSize: "12px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "3px"
     },
     countBox: {
-    width: "38px",
-    height: "26px",
-    background: "white",
-    color: "#1c1c2e",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "6px",
-    fontWeight: "bold",
-    fontSize: "11px"
+        width: "38px",
+        height: "26px",
+        background: "white",
+        color: "#1c1c2e",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "6px",
+        fontWeight: "bold",
+        fontSize: "11px"
     },
     currentCallSection: {
-    background: "#9a6cc3",
-    borderRadius: "10px",
-    padding: "4px",
-    color: "white",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
+        background: "#9a6cc3",
+        borderRadius: "10px",
+        padding: "4px",
+        color: "white",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         justifyContent: "center"
     },
     callCircle: {
-    width: "38px",
-    height: "38px",
-    background: "orange",
-    borderRadius: "50%",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "bold",
-    marginTop: "4px",
-    fontSize: "12px"
+        width: "38px",
+        height: "38px",
+        background: "orange",
+        borderRadius: "50%",
+        color: "white",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: "bold",
+        marginTop: "4px",
+        fontSize: "12px"
     },
     smallBoard: {
-    background: "rgba(255,255,255,0.3)",
-    marginTop: "4px",
+        background: "rgba(255,255,255,0.3)",
+        marginTop: "4px",
         padding: "6px",
         borderRadius: "10px"
     },
@@ -2294,21 +2310,21 @@ const styles = {
         borderRadius: "50%"
     },
     boardGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
-    gap: "2px"
+        display: "grid",
+        gridTemplateColumns: "repeat(5, 1fr)",
+        gap: "2px"
     },
     boardGridCell: {
-    background: "rgba(255,255,255,0.8)",
-    borderRadius: "4px",
-    padding: "5px 0",
-    fontWeight: "600",
-    fontSize: "11px",
-    color: "#333",
-    height: "18px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center"
+        background: "rgba(255,255,255,0.8)",
+        borderRadius: "4px",
+        padding: "5px 0",
+        fontWeight: "600",
+        fontSize: "11px",
+        color: "#333",
+        height: "18px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
     },
     centerCell: {
         background: "#34793e",
@@ -2320,29 +2336,29 @@ const styles = {
         color: "#333"
     },
     bottomButtons: {
-    width: "100%",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginTop: "8px",
-    gap: "6px"
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        marginTop: "8px",
+        gap: "6px"
     },
     bingoBtn: {
-    width: "80%",
-    background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
-    border: "none",
-    color: "white",
-    padding: "6px 10px",
-    borderRadius: "20px",
-    fontWeight: "bold",
-    fontSize: "14px",
-    cursor: "pointer"
+        width: "80%",
+        background: "linear-gradient(90deg, #ff8c00, #ff5e00)",
+        border: "none",
+        color: "white",
+        padding: "6px 10px",
+        borderRadius: "20px",
+        fontWeight: "bold",
+        fontSize: "14px",
+        cursor: "pointer"
     },
     bottomRow: {
-    width: "80%",
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "10px"
+        width: "80%",
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "10px"
     },
     refreshBtnNew: {
         flex: 1,
@@ -2367,11 +2383,11 @@ const styles = {
 
     // New Bingo Hall Styles (adapted from secondUi)
     bingoHallContainer: {
-    background: "#c39cd9",
-    borderRadius: "12px",
-    padding: "10px",
-    display: "flex",
-    flexDirection: "column",
+        background: "#c39cd9",
+        borderRadius: "12px",
+        padding: "10px",
+        display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         marginBottom: "15px"
     },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getBackendUrl } from '../utils/api';
 
 const WalletBalanceImproved = ({ telegramId }) => {
   const [userData, setUserData] = useState(null);
@@ -16,7 +17,8 @@ const WalletBalanceImproved = ({ telegramId }) => {
     if (showRefresh) setRefreshing(true);
     
     try {
-      const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/user/${telegramId}`);
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/user/${telegramId}`);
       if (!response.ok) throw new Error('User not found');
       
       const data = await response.json();
