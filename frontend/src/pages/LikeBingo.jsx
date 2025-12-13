@@ -551,7 +551,7 @@ const LikeBingo = () => {
          console.log(`🔄 Loading user data for telegramId: "${cleanTelegramId}"`);
         
          try {
-             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+             const backendUrl = import.meta.env.VITE_BACKEND_URL || window.location.origin;
              const apiUrl = `${backendUrl}/api/user/${cleanTelegramId}`;
              console.log('🔗 Backend URL:', backendUrl);
              console.log('📡 Full API URL:', apiUrl);
