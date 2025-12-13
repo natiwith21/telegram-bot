@@ -547,14 +547,16 @@ const LikeBingo = () => {
         }
 
         // Ensure telegramId is a string
-        const cleanTelegramId = String(telegramId).trim();
-        console.log(`🔄 Loading user data for telegramId: "${cleanTelegramId}"`);
+         const cleanTelegramId = String(telegramId).trim();
+         console.log(`🔄 Loading user data for telegramId: "${cleanTelegramId}"`);
+        
+         try {
+             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+             const apiUrl = `${backendUrl}/api/user/${cleanTelegramId}`;
+             console.log('🔗 Backend URL:', backendUrl);
+             console.log('📡 Full API URL:', apiUrl);
 
-        try {
-            const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api/user/${cleanTelegramId}`;
-            console.log('Fetching from:', apiUrl);
-
-            const response = await fetch(apiUrl);
+             const response = await fetch(apiUrl);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);

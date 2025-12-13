@@ -1,0 +1,211 @@
+════════════════════════════════════════════════════════════════════════════════
+                    BALANCE SYNC ERROR - QUICK FIX
+════════════════════════════════════════════════════════════════════════════════
+
+ERROR MESSAGE: "⚠️ Unable to sync balance with server. Using local data."
+
+ROOT CAUSE: Duplicate API endpoints in server.js with wrong response format
+
+════════════════════════════════════════════════════════════════════════════════
+                           3 STEPS TO FIX (5 MIN)
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 1: Delete Duplicate Endpoint in server.js
+────────────────────────────────────────────────────────────────────────────────
+FILE: server.js
+ACTION: DELETE Lines 53-71
+
+DELETE THIS ENTIRE BLOCK:
+
+app.get('/api/user/:telegramId', async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    const user = await User.findOne({ telegramId });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      telegramId: user.telegramId,
+      name: user.name,
+      balance: user.balance,
+      bonus: user.bonus
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+WHY: This endpoint returns wrong format. Keep the one at line ~280 instead.
+
+SAVE FILE ✅
+
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 2: Create frontend/.env File
+────────────────────────────────────────────────────────────────────────────────
+FILE: frontend/.env (CREATE NEW FILE)
+LOCATION: telegram-bot/frontend/.env
+
+ADD THIS CONTENT:
+
+VITE_BACKEND_URL=http://localhost:3001
+VITE_WS_URL=ws://localhost:3002
+
+SAVE FILE ✅
+
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 3: Update LikeBingo.jsx
+────────────────────────────────────────────────────────────────────────────────
+FILE: frontend/src/pages/LikeBingo.jsx
+LINE: 554
+
+CHANGE THIS LINE:
+
+BEFORE:
+const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api/user/${cleanTelegramId}`;
+
+TO THIS:
+const apiUrl = `${process.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/user/${cleanTelegramId}`;
+
+SAVE FILE ✅
+
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 4: Restart Services
+────────────────────────────────────────────────────────────────────────────────
+
+Terminal 1:
+  Stop: Ctrl+C (if running)
+  Run: npm start
+
+Terminal 2 (new):
+  Run: cd frontend
+  Run: npm run frontend
+
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 5: Test
+────────────────────────────────────────────────────────────────────────────────
+
+In Telegram:
+  ✓ Send /play
+  ✓ Game should open without warning
+  ✓ Balance should display correctly
+  ✓ Play a game and verify balance updates
+
+In Browser Console (F12):
+  ✓ Should see: "💰 Setting balance: XXX, bonus: XXX"
+  ✗ Should NOT see: "❌ Failed to load user data"
+
+════════════════════════════════════════════════════════════════════════════════
+
+WHY THE ERROR HAPPENED:
+────────────────────────────────────────────────────────────────────────────────
+
+server.js has 2 endpoints doing the same thing:
+
+❌ ENDPOINT 1 (Line 53) - WRONG:
+   GET /api/user/:telegramId
+   Returns: { telegramId, name, balance, bonus }
+   Problem: Missing "success" and "user" wrapper
+   
+✅ ENDPOINT 2 (Line 280) - CORRECT:
+   GET /api/user/:telegramId
+   Returns: { success: true, user: { telegramId, name, balance, bonus } }
+   
+Frontend expects format 2, but Node.js serves endpoint 1 first!
+
+THE FIX: Delete endpoint 1, keep only endpoint 2.
+
+════════════════════════════════════════════════════════════════════════════════
+
+IF IT STILL DOESN'T WORK:
+────────────────────────────────────────────────────────────────────────────────
+
+Check 1: Is server running?
+  npm start should show: "API Server running on port 3001"
+
+Check 2: Can you access the API?
+  Open browser: http://localhost:3001/api/user/5888330255
+  Should return JSON with balance field
+
+Check 3: Check browser console (F12):
+  Look for errors about fetch or CORS
+  Look for 404 or 500 responses
+
+Check 4: Verify .env files:
+  Root .env should have PORT=3001
+  frontend/.env should have VITE_BACKEND_URL=http://localhost:3001
+
+Check 5: Check MongoDB:
+  Make sure MONGODB_URI in root .env is correct
+  Make sure MongoDB is running
+
+════════════════════════════════════════════════════════════════════════════════
+
+BEFORE & AFTER COMPARISON:
+────────────────────────────────────────────────────────────────────────────────
+
+BEFORE FIX:
+  ✗ Game opens
+  ✗ Balance fails to load
+  ✗ Warning: "Unable to sync balance with server"
+  ✗ Uses fallback/demo values
+  ✗ Game plays but balance is wrong
+
+AFTER FIX:
+  ✓ Game opens
+  ✓ Balance loads correctly
+  ✓ No warning message
+  ✓ Real balance shows
+  ✓ Game plays with correct balance tracking
+
+════════════════════════════════════════════════════════════════════════════════
+
+DETAILED EXPLANATION:
+────────────────────────────────────────────────────────────────────────────────
+
+When user plays game:
+
+1. Browser makes request: GET http://localhost:3001/api/user/123456
+2. server.js has 2 endpoints for same URL
+3. Node.js serves the FIRST one it finds (line 53)
+4. Endpoint 1 returns wrong format
+5. Frontend expects { success: true, user: {...} }
+6. But gets { telegramId, name, balance, bonus }
+7. Frontend code checks: if (data.success && data.user)
+8. Condition fails because data.success is undefined
+9. Falls through to error handler
+10. Shows warning: "Unable to sync balance"
+
+FIX:
+1. Delete endpoint 1
+2. Only endpoint 2 exists
+3. Returns correct format
+4. Frontend gets { success: true, user: {...} }
+5. Condition succeeds
+6. Balance loads correctly
+7. No error, no warning
+8. Game plays with real balance
+
+════════════════════════════════════════════════════════════════════════════════
+
+SUMMARY:
+────────────────────────────────────────────────────────────────────────────────
+
+Problem: Duplicate endpoints with different response formats
+Location: server.js lines 53-71 (delete) and line 280 (keep)
+Fix Time: 5 minutes
+Result: Balance syncs perfectly
+
+Files to change:
+  1. server.js (delete lines 53-71)
+  2. frontend/.env (create new)
+  3. LikeBingo.jsx (update line 554)
+
+Restart services and test!
+
+════════════════════════════════════════════════════════════════════════════════

@@ -49,27 +49,6 @@ async function validateToken(req, res, next) {
   }
 }
 
-// Get user balance and bonus
-app.get('/api/user/:telegramId', async (req, res) => {
-  try {
-    const { telegramId } = req.params;
-    const user = await User.findOne({ telegramId });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    res.json({
-      telegramId: user.telegramId,
-      name: user.name,
-      balance: user.balance,
-      bonus: user.bonus
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // Bingo win endpoint - now requires token
 app.post('/api/bingo-win/:telegramId', validateToken, async (req, res) => {
   try {
