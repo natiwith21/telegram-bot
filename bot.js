@@ -322,10 +322,10 @@ const PAYMENT_CONFIG = {
   minAmount: 50,
   maxAmount: 10000,
   supportedMethods: ['Telebirr', 'HelloCash', 'Bank Transfer'],
-  agentPhone: process.env.AGENT_PHONE || '0967218959',
+  agentPhone: process.env.AGENT_PHONE,
   agentName: process.env.AGENT_NAME || 'Payment Agent',
-  bankAccount: '1000526054753',
-  bankName: 'Ethiopian Commercial Bank',
+  bankAccount: process.env.BANK_ACCOUNT_NUMBER,
+  bankName: process.env.BANK_NAME,
   pointRate: 1 // 1 Birr = 1 point
 };
 

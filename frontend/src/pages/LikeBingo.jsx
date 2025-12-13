@@ -429,7 +429,7 @@ const LikeBingo = () => {
         console.log(`   Pool Data:`, poolData);
 
         try {
-            const response = await fetch(`https://telegram-bot-u2ni.onrender.com/api/like-bingo-play`, {
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/like-bingo-play`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -551,7 +551,7 @@ const LikeBingo = () => {
         console.log(`🔄 Loading user data for telegramId: "${cleanTelegramId}"`);
 
         try {
-            const apiUrl = `https://telegram-bot-u2ni.onrender.com/api/user/${cleanTelegramId}`;
+            const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api/user/${cleanTelegramId}`;
             console.log('Fetching from:', apiUrl);
 
             const response = await fetch(apiUrl);
@@ -1510,7 +1510,7 @@ const LikeBingo = () => {
                             <button
                                 onClick={async () => {
                                     try {
-                                        const testUrl = `https://telegram-bot-u2ni.onrender.com/api/user/5888330255`;
+                                        const testUrl = `${process.env.REACT_APP_BACKEND_URL}/api/user/5888330255`;
                                         const response = await fetch(testUrl);
                                         const data = await response.json();
                                         console.log('Test API Response:', data);
@@ -1581,7 +1581,7 @@ const LikeBingo = () => {
                             TelegramId: {telegramId || 'Not set'}<br />
                             GameMode: {gameMode}<br />
                             Balance: {userBalance}<br />
-                            API URL: https://telegram-bot-u2ni.onrender.com/api/user/{telegramId}
+                            API URL: {process.env.REACT_APP_BACKEND_URL}/api/user/{telegramId}
                         </div>
                     )}
 

@@ -14,7 +14,7 @@ export const useWebSocket = (telegramId, token, roomId = 'default') => {
     try {
       // Use production WebSocket URL for deployment  
       const wsUrl = process.env.NODE_ENV === 'production' 
-        ? `wss://telegram-bot-u2ni.onrender.com/ws?telegramId=${telegramId}&token=${token}&roomId=${roomId}`
+        ? `${process.env.REACT_APP_BACKEND_URL}/ws?telegramId=${telegramId}&token=${token}&roomId=${roomId}`
         : `ws://localhost:3002?telegramId=${telegramId}&token=${token}&roomId=${roomId}`;
       ws.current = new WebSocket(wsUrl);
 
