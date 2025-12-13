@@ -1477,12 +1477,16 @@ bot.action('invite', async (ctx) => {
 });
 
 bot.action('support', async (ctx) => {
+  const supportEmail = process.env.SUPPORT_EMAIL || 'support@bingobot.com';
+  const supportTelegram = process.env.SUPPORT_TELEGRAM || '@BingoSupport';
+  const supportTelegramUrl = `https://t.me/${supportTelegram.replace('@', '')}`;
+  
   await safeEditMessage(ctx,
-    '📞 **Contact Support**\n\nNeed help? Our support team is here for you!\n\n📧 Email: support@bingobot.com\n💬 Telegram: @BingoSupport\n⏰ Hours: 24/7',
+    `📞 **Contact Support**\n\nNeed help? Our support team is here for you!\n\n📧 Email: ${supportEmail}\n💬 Telegram: ${supportTelegram}\n⏰ Hours: 24/7`,
     {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.url('💬 Message Support', 'https://t.me/BingoSupport')],
+        [Markup.button.url('💬 Message Support', supportTelegramUrl)],
         [Markup.button.callback('⬅️ Back to Menu', 'main_menu')]
       ]).reply_markup
     }
@@ -1605,12 +1609,16 @@ bot.command('balance', async (ctx) => {
 // Old deposit command removed - replaced by comprehensive flow below
 
 bot.command('support', async (ctx) => {
+  const supportEmail = process.env.SUPPORT_EMAIL || 'support@bingobot.com';
+  const supportTelegram = process.env.SUPPORT_TELEGRAM || '@BingoSupport';
+  const supportTelegramUrl = `https://t.me/${supportTelegram.replace('@', '')}`;
+  
   await ctx.reply(
-    '📞 **Contact Support**\n\nNeed help? Our support team is here for you!\n\n📧 Email: support@bingobot.com\n💬 Telegram: @BingoSupport\n⏰ Hours: 24/7',
+    `📞 **Contact Support**\n\nNeed help? Our support team is here for you!\n\n📧 Email: ${supportEmail}\n💬 Telegram: ${supportTelegram}\n⏰ Hours: 24/7`,
     {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.url('💬 Message Support', 'https://t.me/BingoSupport')],
+        [Markup.button.url('💬 Message Support', supportTelegramUrl)],
         [Markup.button.callback('🎮 Back to Menu', 'main_menu')]
       ]).reply_markup
     }
@@ -2058,7 +2066,7 @@ bot.on('text', async (ctx) => {
 ⏱️ **Processing Time:** 5-15 minutes
 
 📞 **Need Help?**
-• Support: @nati280 (support)
+• Support: ${process.env.SUPPORT_TELEGRAM} (support)
 
 🎮 **Once verified, you'll receive a notification and can play all games!**`,
       { parse_mode: 'Markdown' }
@@ -2188,7 +2196,7 @@ bot.action('payment_cbe', async (ctx) => {
 \`\`\`\n` +
 `📢 **ማሳሰቢያ:**\n` +
 `- አጭር የጹሁፍ መለክት(sms) ካልደረሳቹ ያለትራንዛክሽን ቁጥር ሲስተሙ ዋሌት ስለማይሞላላቹ የከፈላችሁበትን ደረሰኝ ከባንክ በመቀበል በማንኛውም ሰአት ትራንዛክሽን ቁጥሩን ቦቱ ላይ ማስገባት ትችላላቹ\n\n` +
-`- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
+`- የሚያጋጥማችሁ ችግር ካለ ${process.env.SUPPORT_TELEGRAM} (support) ያነጋገሩ\n\n` +
 `✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
 
   await ctx.reply(message, {
@@ -2218,7 +2226,7 @@ bot.action('payment_telebirr', async (ctx) => {
 \`\`\`\n` +
 `📢 **ማሳሰቢያ:**\n` +
 `- ከቴሌብር የሚመጣ SMS ካልደረሰ የትራንዛክሽን ቁጥር በቦቱ ላይ በእጅ ይስግቡ\n` +
-`- የሚያጋጥማችሁ ችግር ካለ @nati280 (support) ያነጋገሩ\n\n` +
+`- የሚያጋጥማችሁ ችግር ካለ ${process.env.SUPPORT_TELEGRAM} (support) ያነጋገሩ\n\n` +
 `✍️ **የትራንዛክሽን ቁጥር ወይም SMS እዚ ላይ ያስገቡ**\n👇👇👇`;
 
   await ctx.reply(message, {
