@@ -12,10 +12,32 @@ export const useWebSocket = (telegramId, token, roomId = 'default') => {
     if (!telegramId) return;
 
     try {
-      // Use production WebSocket URL for deployment  
-      const wsUrl = process.env.NODE_ENV === 'production' 
-        ? `${process.env.REACT_APP_BACKEND_URL}/ws?telegramId=${telegramId}&token=${token}&roomId=${roomId}`
-        : `ws://localhost:3002?telegramId=${telegramId}&token=${token}&roomId=${roomId}`;
+      // Get backend URL with proper fallback
+      const getBackendUrl = () => {
+        // Check for Vite environment variable first
+        if (import.meta.env.VITE_BACKEND_URL) {
+          return import.meta.env.VITE_BACKEND_URL;
+        }
+        // Fallback to production URL
+        return 'https://telegram-bot-u2ni.onrender.com';
+      };
+
+      // Build WebSocket URL with proper protocol
+      let wsUrl;
+      const backendUrl = getBackendUrl();
+      
+      if (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1')) {
+        // Local development: use ws://
+        wsUrl = `ws://localhost:3002?telegramId=${telegramId}&token=${token}&roomId=${roomId}`;
+      } else if (backendUrl.includes('http://')) {
+        // HTTP backend: use ws://
+        wsUrl = backendUrl.replace('http://', 'ws://') + `/ws?telegramId=${telegramId}&token=${token}&roomId=${roomId}`;
+      } else {
+        // HTTPS backend: use wss://
+        wsUrl = backendUrl.replace('https://', 'wss://') + `/ws?telegramId=${telegramId}&token=${token}&roomId=${roomId}`;
+      }
+      
+      console.log('🔌 WebSocket URL:', wsUrl);
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {

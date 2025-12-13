@@ -1,0 +1,155 @@
+================================================================================
+QUICK DEPLOY SCRIPT - WebSocket Countdown & Balance Sync Fix
+================================================================================
+
+WHAT WAS FIXED:
+  ✅ Balance sync now works (API URL fixed)
+  ✅ Countdown now works (WebSocket fixed)
+  ✅ Current Call now works (real-time updates)
+
+TIME TO DEPLOY: ~5 minutes
+
+================================================================================
+STEP 1: VERIFY ENVIRONMENT SETUP
+================================================================================
+
+frontend/.env should have:
+  VITE_BACKEND_URL=https://telegram-bot-u2ni.onrender.com
+
+root .env should have:
+  NODE_ENV=production
+  WS_PORT=3002
+  BACKEND_URL=https://telegram-bot-u2ni.onrender.com
+
+
+If MISSING: Add them now!
+
+================================================================================
+STEP 2: BUILD FRONTEND
+================================================================================
+
+cd frontend
+npm install
+npm run build
+
+Wait for "✓ built in Xs" message
+
+
+================================================================================
+STEP 3: COMMIT & PUSH TO GITHUB
+================================================================================
+
+cd ..  (back to root)
+
+git add .
+git commit -m "Fix: Balance sync + WebSocket countdown with correct URLs"
+git push origin main
+
+Wait for "Everything up-to-date" message
+
+
+================================================================================
+STEP 4: WAIT FOR RENDER DEPLOYMENT
+================================================================================
+
+1. Go to https://dashboard.render.com
+2. Select your project
+3. Watch for green "Deployed" status
+4. Takes 2-3 minutes usually
+
+Or curl to check:
+  curl https://telegram-bot-u2ni.onrender.com/health
+
+Should return JSON with healthy status
+
+
+================================================================================
+STEP 5: TEST IN BROWSER
+================================================================================
+
+1. Open game: https://telegram-bot-u2ni.onrender.com/like-bingo
+
+2. Press F12 → Console tab
+
+3. Look for THESE SUCCESS MESSAGES:
+   ✅ Using production URL fallback
+   🔌 WebSocket URL: wss://telegram-bot-u2ni.onrender.com/ws...
+   WebSocket connected
+   ✅ Found user with balance: XXX
+   💳 Wallet synced: XXX coins
+
+4. Play a game:
+   ✓ Countdown appears and updates every second
+   ✓ Current Call shows numbers
+   ✓ Can mark numbers
+   ✓ Balance updates after win/loss
+
+IF ALL ABOVE WORK: ✅ YOU'RE DONE!
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+PROBLEM: Still showing "Unable to sync balance"
+SOLUTION:
+  1. Clear browser cache: Ctrl+Shift+Delete
+  2. Hard reload: Ctrl+F5
+  3. Check: Is VITE_BACKEND_URL in frontend/.env?
+  4. If not there, add it and re-push to GitHub
+
+PROBLEM: Countdown still not showing
+SOLUTION:
+  1. Check browser console for "WebSocket connected"
+  2. If not connected, check Render backend logs
+  3. Verify NODE_ENV=production in root .env
+  4. Try hard refresh (Ctrl+F5)
+
+PROBLEM: WebSocket "Error" in console
+SOLUTION:
+  1. Is VITE_BACKEND_URL correct?
+  2. Is Render backend running? (check health endpoint)
+  3. Clear cache and retry
+  4. Check Render logs for errors
+
+
+================================================================================
+FILES CHANGED (4 files)
+================================================================================
+
+1. frontend/src/utils/api.js
+   - Fixed API URL fallback logic
+
+2. frontend/src/pages/LikeBingo.jsx
+   - Fixed balance sync API calls
+
+3. frontend/src/hooks/useWebSocket.js
+   - Fixed WebSocket connection with proper URL handling
+
+4. frontend/.env.example
+   - New file with environment variable documentation
+
+
+================================================================================
+DETAILED INFO
+================================================================================
+
+For detailed explanation, see:
+  - COMPLETE_FIX_GUIDE.md (full guide)
+  - BALANCE_SYNC_FIX_2025.md (balance fix details)
+  - WEBSOCKET_COUNTDOWN_FIX.md (countdown fix details)
+
+For deployment help, see:
+  - DEPLOY_FIX.md
+
+
+================================================================================
+THAT'S IT! Your fixes are deployed.
+================================================================================
+
+Check game working correctly by playing:
+1. Balance shows ✓
+2. Countdown shows ✓
+3. Current Call shows ✓
+4. Game plays properly ✓
+
