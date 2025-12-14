@@ -3356,18 +3356,39 @@ app.post('/api/like-bingo-play', async (req, res) => {
       let gameRecord = '';
       
       if (isWin) {
-        // UPDATED: Use actual pool data if available, otherwise fallback to multipliers
-        if (totalPoolCollected && totalPoolCollected > 0) {
-          // Calculate from actual pool: 80% of total pool
+        // CRITICAL FIX: Validate pool data from WebSocket (don't trust client)
+        // Server-side pool calculation: playerCount × gameMode stake
+        const validStakes = { '10': 10, '20': 20, '50': 50, '100': 100 };
+        const expectedStakePerPlayer = validStakes[gameMode] || 10;
+        const serverCalculatedPool = (playerCount || 1) * expectedStakePerPlayer;
+        
+        // UPDATED: Use actual pool data if available and reasonable, otherwise fallback to multipliers
+        // Only trust pool data if it matches expected calculation (within 10% margin for rounding)
+        const isPoolDataValid = totalPoolCollected && totalPoolCollected > 0 &&
+          Math.abs(totalPoolCollected - serverCalculatedPool) <= Math.ceil(serverCalculatedPool * 0.1);
+        
+        if (isPoolDataValid) {
+          // Use WebSocket pool data (it's validated)
           winAmount = Math.floor(totalPoolCollected * 0.80);
           
-          console.log(`🏆 WIN FROM ACTUAL POOL:`);
+          console.log(`🏆 WIN FROM VALIDATED WEBSOCKET POOL:`);
           console.log(`   Total Pool Collected: ${totalPoolCollected} coins`);
+          console.log(`   Server Calculated Pool: ${serverCalculatedPool} coins`);
           console.log(`   Winner Share (80%): ${winAmount} coins`);
           console.log(`   House Share (20%): ${totalPoolCollected - winAmount} coins`);
           console.log(`   Players in Game: ${playerCount || 1}`);
+        } else if (totalPoolCollected && totalPoolCollected > 0) {
+          // Pool data exists but doesn't match - use server calculation instead
+          winAmount = Math.floor(serverCalculatedPool * 0.80);
           
-          gameRecord = `Bingo ${gameMode}: WIN - Pool: ${totalPoolCollected}, Won: ${winAmount} (80%), Net: +${winAmount - stake}`;
+          console.log(`⚠️  POOL MISMATCH - USING SERVER CALCULATION:`);
+          console.log(`   Client sent: ${totalPoolCollected} coins`);
+          console.log(`   Server calculated: ${serverCalculatedPool} coins (${playerCount} × ${expectedStakePerPlayer})`);
+          console.log(`   Using server value: ${serverCalculatedPool} coins`);
+          console.log(`   Winner Share (80%): ${winAmount} coins`);
+          console.log(`   House Share (20%): ${serverCalculatedPool - winAmount} coins`);
+          
+          gameRecord = `Bingo ${gameMode}: WIN - Pool: ${serverCalculatedPool} (verified), Won: ${winAmount} (80%), Net: +${winAmount - stake}`;
         } else {
           // Fallback to multipliers if pool data not available
           const winMultipliers = {

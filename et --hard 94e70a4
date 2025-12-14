@@ -1,0 +1,162 @@
+[33m672f082[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m secondui56
+[33m389fa10[m secondui55
+[33m94da9da[m secondui54
+[33m53159b9[m secondui53
+[33m16bd449[m secondui52
+[33m94e70a4[m secondui51
+[33ma45fb5a[m secondui50
+[33mbe5fce1[m secondui49
+[33m0d63a4a[m secondui47
+[33m3838fc2[m secondui46
+[33m0babe84[m secondui45
+[33md8e3505[m secondui44
+[33m6d6a315[m secondui43
+[33m1e86928[m secondui42
+[33m92d94be[m secondui41
+[33mfcc91ea[m secondui40
+[33me47a824[m secondui39
+[33m198e708[m secondui38
+[33m00ace04[m secondui37
+[33m857c792[m secondui35
+[33m196321c[m secondui34
+[33m793bcdc[m secondui33
+[33m30bd519[m secondui32
+[33mc54354f[m secondui31
+[33m9a603a5[m secondui30
+[33m2bcd9a6[m secondui29
+[33m9de229b[m secondui28
+[33m778b875[m secondui27
+[33m80ddec9[m secondui26
+[33m73d17f5[m secondui25
+[33m7ad9b24[m secondui24
+[33m8e83294[m secondui23
+[33md3970bb[m secondui22
+[33mec85c44[m secondui21
+[33m7decb34[m secondui20
+[33ma7638be[m secondui19
+[33ma98b590[m secondui18
+[33m08f866e[m secondui17
+[33m30ece3b[m secondui16
+[33m810c7a5[m secondui15
+[33m743fe1e[m secondui14
+[33m9ad9c32[m secondui13
+[33m0189e7d[m secondui12
+[33mb9471c8[m secondui13
+[33m41da408[m secondui12
+[33md5f6df6[m secondui11
+[33ma3f4f14[m secondui10
+[33mf806002[m secondui9
+[33mb4ec177[m secondui8
+[33ma237c8f[m secondui7
+[33mbeaba78[m secondui6
+[33m9221050[m secondui5
+[33me0f91b3[m secondui4
+[33med92d5f[m secondui3
+[33mfea9bff[m secondui2
+[33m6002c34[m secondui1
+[33m8ba6954[m secondui
+[33m2f487cd[m front30
+[33m332a4d2[m front25
+[33ma64478d[m front24
+[33ma6a099b[m front23
+[33mf2da5d7[m front22
+[33m2b81d1f[m front19
+[33m5116b46[m front18
+[33m3df370c[m front17
+[33m003e8b1[m front16
+[33m00e85c1[m front15
+[33m3f8541e[m front14
+[33mf9babfe[m front13
+[33mab43fa7[m front12
+[33m09fe148[m front11
+[33ma54b9b5[m front10
+[33m4f1ae43[m front9
+[33m358ec7f[m front8
+[33m0aea481[m front7
+[33mee4b38d[m front6
+[33m80e376e[m front5
+[33m9e10abf[m[33m ([m[1;31morigin/natibusiness[m[33m)[m Nati22
+[33m28143e0[m Nati22
+[33mddcb324[m Nati21
+[33m6a795cb[m Nati20
+[33m7b9dc0d[m Nati19
+[33mc3ca05d[m Nati18
+[33m0e79f06[m Nati17
+[33m929dd95[m Nati16
+[33m95f07f2[m Nati15
+[33m97606d8[m Nati14
+[33mcea8541[m Nati13
+[33me7e889f[m Nati12
+[33m77167d9[m Nati11
+[33m5a7cf0a[m Nati10
+[33m97613de[m Nati9
+[33m10eecd2[m Fix copyText error by implementing callback button fallbacks for payment copy functionality
+[33mf945b14[m Improve payment messages with copy-paste functionality for CBE Bank and Telebirr
+[33m5fac460[m Nati7
+[33md3d8650[m Nati6
+[33m5e6c908[m Nati5
+[33m4921163[m Nati4
+[33m1089ee2[m Nati3
+[33m2680d7d[m Nati2
+[33m78fea37[m Nati1
+[33m69fd982[m Nati
+[33m4892b3a[m yisak4
+[33md9bb67b[m yisak3
+[33mc4e35a9[m yisak2
+[33mf80bd02[m yisak1
+[33m0aa1273[m yisak
+[33m303b6fe[m language4
+[33mecb94bf[m language3
+[33m5d8005c[m language2
+[33mb2a79a4[m language
+[33m6d192d7[m deployy5
+[33mf2d94b9[m deployy4
+[33m37b7828[m deployy3
+[33me329ae9[m deployy2
+[33m49291b0[m deployy1
+[33m31ce712[m deployy
+[33m5e40223[m socket8
+[33me994e3a[m socket7
+[33mf30d533[m socket6
+[33m22fc581[m socket5
+[33m37ea034[m socket4
+[33md347c63[m socket3
+[33me75fcd1[m socket2
+[33m17547d5[m socket
+[33m7ddc7c5[m withdraw8
+[33md5b17d6[m withdraw7
+[33mfc33e0a[m withdraw6
+[33mf1cfec6[m withdraw5
+[33m8ece57a[m withdraw4
+[33m3c8ff23[m withdraw3
+[33meca4e4b[m withdraw2
+[33mf63bce5[m withdraw
+[33m94bf081[m CRITICAL: Add comprehensive crash prevention - no more 20min crashes
+[33mc526dae[m CRITICAL: Fix subsequent games not affecting balance - ensure all game ends process results
+[33ma026eeb[m CRITICAL: Fix Telegram bot upfront deductions - remove all immediate balance charges
+[33m22a2f97[m CRITICAL: Eliminate all upfront balance deductions - points only deducted on game end
+[33mbf862a9[m CRITICAL: Fix balance deduction logic to prevent double charging
+[33m2ed17c6[m Fix: Add missing API routes to bot.js for balance sync
+[33m96d8286[m wallet
+[33m4681979[m balance
+[33mfa4c052[m Implement real balance system with proper game economics
+[33me197131[m Update LikeBingo to use real user balance and proper game economics
+[33md8880b0[m Update all bingo games to use modern LikeBingo interface
+[33m671886b[m Update backend URL to new Render deployment
+[33md86f08a[m Fix webhook setup order
+[33mc01ef82[m Use webhooks for production deployment
+[33m6b19746[m Add error handling to prevent bot crashes from blocked users
+[33m8663bd8[m Remove node_modules and fix Vercel build permissions
+[33m97e6e89[m Fix vercel config for frontend build
+[33m2553d97[m Add vercel.json for frontend deployment
+[33m2957451[m Update vercel.json
+[33maf17fbe[m Remove vercel.json - deploy frontend directly
+[33m5606c68[m Add frontend directory and Vercel config
+[33mf69a0ec[m the 7th one
+[33mb45da35[m the 6th one
+[33md6d6f03[m the 5th one
+[33m0d5e99d[m the fourth one
+[33m419de66[m thired one
+[33m2c50fa3[m Initial commit2
+[33m3714d78[m Initial push of my code
+[33m0816409[m Initial commit
