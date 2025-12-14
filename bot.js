@@ -322,7 +322,7 @@ const PAYMENT_CONFIG = {
   minAmount: 50,
   maxAmount: 10000,
   supportedMethods: ['Telebirr', 'HelloCash', 'Bank Transfer'],
-  agentPhone: process.env.AGENT_PHONE,
+  agentPhone: process.env.TELEBIRR_PHONE,
   agentName: process.env.AGENT_NAME || 'Payment Agent',
   bankAccount: process.env.BANK_ACCOUNT_NUMBER,
   bankName: process.env.BANK_NAME,
