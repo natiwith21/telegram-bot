@@ -74,6 +74,13 @@ const LikeBingo = () => {
         return () => clearInterval(balanceRefreshInterval);
     }, [gameMode, telegramId]);
 
+    // Initialize stake from gameMode only once when gameMode changes
+    useEffect(() => {
+        const stakeCost = parseInt(gameMode);
+        setStake(stakeCost);
+        console.log(`💰 Stake initialized to ${stakeCost} based on gameMode`);
+    }, [gameMode]);
+
     // Force reload user data when entering game
     useEffect(() => {
         if (telegramId && gameMode !== 'demo') {
@@ -591,16 +598,13 @@ const LikeBingo = () => {
                 setUserBonus(bonus);
                 setGameHistory(history);
 
-                // Set stake based on game mode
-                const stakeCost = parseInt(gameMode);
-                setStake(stakeCost);
-
-                if (balance < stakeCost) {
-                    setShowWarning(true);
-                    console.log(`⚠️ Insufficient balance: ${balance} < ${stakeCost}`);
-                } else {
-                    setShowWarning(false);
-                    console.log(`✅ Sufficient balance: ${balance} >= ${stakeCost}`);
+                // Check if user has sufficient balance for current stake
+                if (balance < stake) {
+                     setShowWarning(true);
+                     console.log(`⚠️ Insufficient balance: ${balance} < ${stake}`);
+                 } else {
+                     setShowWarning(false);
+                     console.log(`✅ Sufficient balance: ${balance} >= ${stake}`);
                 }
 
                 // Show balance in UI for user confirmation
