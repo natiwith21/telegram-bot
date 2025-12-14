@@ -1352,7 +1352,7 @@ bot.on('contact', async (ctx) => {
       // Referral bonuses will be awarded when users make their first deposit
       
       await ctx.reply(
-        `🎉 **Registration Successful!**\n\nYou have been successfully registered!\n\n💰 Starting Balance: 0 coins\n🎁 Starting Bonus: 0 coins\n\n💡 **To start playing:**\n• Use /deposit to add money to your wallet\n• Or try the free demo game first\n\nClick /play to see available games!`,
+        `🎉 **Registration Successful!**\n\nYou have been successfully registered!\n\n💰 Starting Balance: 0 coins\n🎁 Starting Bonus: 0 coins\n\n💡 **To start playing:**\n• Use /deposit to add money to your wallet\n• Or try the free demo game first\n\nClick /playbingo to see available games!`,
         Markup.removeKeyboard()
       );
       
