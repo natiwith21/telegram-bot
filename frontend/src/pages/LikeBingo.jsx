@@ -885,7 +885,7 @@ const LikeBingo = () => {
             // For paid versions, send claim to server via WebSocket
             console.log('🏆 Claiming Bingo in shared game!');
             sendMessage({
-                type: 'claim_bingo',
+                type: 'claim_live_bingo',
                 telegramId,
                 gameMode,
                 markedCells: Array.from(markedCells),
