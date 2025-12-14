@@ -1359,7 +1359,63 @@ if (sharedGame.calledNumbers.length < 20) {
   }
   }
 
-  // Handle Bingo claim in live game
+  // CRITICAL: Validate Bingo pattern server-side
+function validateBingoPattern(markedCells, bingoCard) {
+  // markedCells: array of cell coordinates like ['0-0', '0-1', '0-2', '0-3', '0-4']
+  // bingoCard: 2D array of numbers on the player's card
+  
+  if (!markedCells || !bingoCard) {
+    return false;
+  }
+  
+  // Convert array to Set for O(1) lookup
+  const marked = new Set(markedCells);
+  
+  const winPatterns = [];
+  
+  // Check all ROWS
+  for (let row = 0; row < 5; row++) {
+    const rowPattern = [];
+    for (let col = 0; col < 5; col++) {
+      rowPattern.push(`${row}-${col}`);
+    }
+    winPatterns.push({ type: 'row', pattern: rowPattern });
+  }
+  
+  // Check all COLUMNS
+  for (let col = 0; col < 5; col++) {
+    const colPattern = [];
+    for (let row = 0; row < 5; row++) {
+      colPattern.push(`${row}-${col}`);
+    }
+    winPatterns.push({ type: 'column', pattern: colPattern });
+  }
+  
+  // Check DIAGONALS
+  winPatterns.push({ 
+    type: 'diagonal_tlbr', 
+    pattern: ['0-0', '1-1', '2-2', '3-3', '4-4']  // Top-left to bottom-right
+  });
+  
+  winPatterns.push({ 
+    type: 'diagonal_trbl', 
+    pattern: ['0-4', '1-3', '2-2', '3-1', '4-0']  // Top-right to bottom-left
+  });
+  
+  // Check if any pattern is completely marked
+  for (const { type, pattern } of winPatterns) {
+    if (pattern.every(cell => marked.has(cell))) {
+      console.log(`✅ VALID PATTERN DETECTED: ${type} - Player has valid Bingo!`);
+      return true;  // Valid pattern found
+    }
+  }
+  
+  // No valid pattern found
+  console.warn(`⚠️  PATTERN VALIDATION FAILED: Player's marked cells do not form a valid Bingo pattern`);
+  return false;
+}
+
+// Handle Bingo claim in live game
    async function handleClaimLiveBingo(telegramId, message) {
    const { gameMode, winPattern } = message;
    // CRITICAL: Use level-specific room to ensure prize pool isolation
@@ -1408,6 +1464,17 @@ if (sharedGame.calledNumbers.length < 20) {
          message: 'Invalid game level claim'
        });
        return;
+     }
+     
+     // CRITICAL: Validate Bingo pattern server-side - MUST HAVE VALID PATTERN TO WIN
+     const hasValidPattern = validateBingoPattern(message.markedCells, message.bingoCard);
+     if (!hasValidPattern) {
+       console.error(`🚨 SECURITY: Player ${telegramId} attempted to claim Bingo WITHOUT valid pattern!`);
+       sendToUser(telegramId, {
+         type: 'error',
+         message: 'Invalid Bingo! You do not have a valid pattern.'
+       });
+       return;  // REJECT - no valid pattern found
      }
      
      // CRITICAL: Calculate prize pool ONLY from THIS game level
